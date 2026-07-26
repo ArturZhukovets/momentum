@@ -13,3 +13,4 @@ build/
 dist/
 .venv/
 .ruff_cache/
+.idea/
