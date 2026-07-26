@@ -6,5 +6,4 @@ __pycache__/
 .ruff_cache/
 .git/
 plan.md
-README.md
 deploy/
