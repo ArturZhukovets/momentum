@@ -102,6 +102,23 @@ async def list_subscribers() -> list[UserRow]:
 
 
 # --------------------------------------------------------------------------
+# improvement requests — writes
+# --------------------------------------------------------------------------
+
+
+async def add_improvement_request(*, user_id: int, user_full_name: str, request_text: str) -> int:
+    cur = await conn().execute(
+        """
+        INSERT INTO improvement_requests (user_id, user_full_name, request_text, created_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (user_id, user_full_name, request_text, _now_iso()),
+    )
+    await conn().commit()
+    return int(cur.lastrowid)
+
+
+# --------------------------------------------------------------------------
 # workouts — writes
 # --------------------------------------------------------------------------
 

@@ -1,4 +1,4 @@
-"""FSM state groups for the add and edit flows."""
+"""FSM state groups for interactive bot flows."""
 
 from __future__ import annotations
 
@@ -21,3 +21,7 @@ class AddWorkout(StatesGroup):
 class EditWorkout(StatesGroup):
     awaiting_description = State()
     awaiting_date = State()
+
+
+class Suggestion(StatesGroup):
+    awaiting_text = State()

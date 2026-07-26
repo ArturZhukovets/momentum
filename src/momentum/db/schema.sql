@@ -18,6 +18,16 @@ CREATE TABLE IF NOT EXISTS workouts (
 
 CREATE INDEX IF NOT EXISTS ix_workouts_user_date ON workouts(user_id, performed_on);
 
+CREATE TABLE IF NOT EXISTS improvement_requests (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id        INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    user_full_name TEXT    NOT NULL,
+    request_text   TEXT    NOT NULL CHECK (length(trim(request_text)) > 0),
+    status         TEXT    NOT NULL DEFAULT 'new'
+                           CHECK (status IN ('new','done','rejected')),
+    created_at     TEXT    NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS workout_body_parts (
     workout_id INTEGER NOT NULL REFERENCES workouts(id) ON DELETE CASCADE,
     body_part  TEXT    NOT NULL,

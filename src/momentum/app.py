@@ -16,7 +16,7 @@ from aiohttp import web
 from momentum import texts
 from momentum.config import settings
 from momentum.db.engine import close_db, init_db
-from momentum.handlers import add_workout, common, history
+from momentum.handlers import add_workout, common, history, suggestions
 from momentum.handlers import reports as reports_handlers
 from momentum.scheduler import build_scheduler
 
@@ -41,6 +41,7 @@ def build_dispatcher() -> Dispatcher:
     dp.include_router(add_workout.router)
     dp.include_router(history.router)
     dp.include_router(reports_handlers.router)
+    dp.include_router(suggestions.router)
     return dp
 
 
