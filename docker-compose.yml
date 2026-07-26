@@ -1,0 +1,10 @@
+services:
+  bot:
+    build: .
+    env_file: .env
+    ports:
+      # Loopback only — nginx on the host terminates TLS and proxies here.
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

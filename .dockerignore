@@ -1,0 +1,10 @@
+.env
+data/
+.venv/
+__pycache__/
+*.py[cod]
+.ruff_cache/
+.git/
+plan.md
+README.md
+deploy/

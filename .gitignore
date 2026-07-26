@@ -1,0 +1,15 @@
+# Secrets
+.env
+
+# Database (bind-mounted at runtime)
+data/*
+!data/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+.ruff_cache/
