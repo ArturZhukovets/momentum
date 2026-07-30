@@ -10,7 +10,7 @@ from collections import Counter
 from dataclasses import dataclass
 from datetime import date, timedelta
 
-from momentum.db.repo import WorkoutPoint
+from momentum.db.models import WorkoutPoint
 from momentum.services import periods
 
 STREAK_LOOKBACK_WEEKS = 52

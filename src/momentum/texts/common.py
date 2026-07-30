@@ -1,0 +1,156 @@
+"""Shared/cross-flow copy: dates, plurals, main menu, /help, /cancel."""
+
+from __future__ import annotations
+
+from datetime import date, datetime
+
+# --------------------------------------------------------------------------
+# Russian grammar / date helpers
+# --------------------------------------------------------------------------
+
+WEEKDAYS = (
+    "понедельник",
+    "вторник",
+    "среда",
+    "четверг",
+    "пятница",
+    "суббота",
+    "воскресенье",
+)
+
+MONTHS_NOMINATIVE = (
+    "Январь",
+    "Февраль",
+    "Март",
+    "Апрель",
+    "Май",
+    "Июнь",
+    "Июль",
+    "Август",
+    "Сентябрь",
+    "Октябрь",
+    "Ноябрь",
+    "Декабрь",
+)
+
+WORKOUTS_PLURAL = ("тренировка", "тренировки", "тренировок")
+WEEKS_PLURAL = ("неделя", "недели", "недель")
+SUGGESTIONS_PLURAL = ("предложение", "предложения", "предложений")
+USERS_PLURAL = ("пользователь", "пользователя", "пользователей")
+
+
+def plural(n: int, forms: tuple[str, str, str]) -> str:
+    """Russian plural form for `n`: (1 тренировка, 2 тренировки, 5 тренировок)."""
+    n = abs(n)
+    if n % 10 == 1 and n % 100 != 11:
+        return forms[0]
+    if 2 <= n % 10 <= 4 and not (12 <= n % 100 <= 14):
+        return forms[1]
+    return forms[2]
+
+
+def workouts_word(n: int) -> str:
+    return plural(n, WORKOUTS_PLURAL)
+
+
+def weeks_word(n: int) -> str:
+    return plural(n, WEEKS_PLURAL)
+
+
+def suggestions_word(n: int) -> str:
+    return plural(n, SUGGESTIONS_PLURAL)
+
+
+def users_word(n: int) -> str:
+    return plural(n, USERS_PLURAL)
+
+
+def fmt_date(d: date) -> str:
+    """05.07.2026"""
+    return d.strftime("%d.%m.%Y")
+
+
+def fmt_date_short(d: date) -> str:
+    """05.07"""
+    return d.strftime("%d.%m")
+
+
+def fmt_weekday(d: date) -> str:
+    return WEEKDAYS[d.weekday()]
+
+
+def fmt_month_year(d: date) -> str:
+    """Июль 2026"""
+    return f"{MONTHS_NOMINATIVE[d.month - 1]} {d.year}"
+
+
+def fmt_datetime(dt: datetime) -> str:
+    """05.07.2026 14:32"""
+    return dt.strftime("%d.%m.%Y %H:%M")
+
+
+# --------------------------------------------------------------------------
+# Menu / commands
+# --------------------------------------------------------------------------
+
+BTN_ADD = "➕ Добавить тренировку"
+BTN_HISTORY = "📜 История"
+BTN_WEEK = "📊 Неделя"
+BTN_MONTH = "🗓 Месяц"
+
+COMMAND_DESCRIPTIONS: tuple[tuple[str, str], ...] = (
+    ("start", "начать"),
+    ("add", "добавить тренировку"),
+    ("history", "история"),
+    ("week", "отчёт за неделю"),
+    ("month", "отчёт за месяц"),
+    ("suggest", "предложить улучшение"),
+    ("reports_on", "включить авто-отчёты"),
+    ("reports_off", "выключить авто-отчёты"),
+    ("cancel", "отмена"),
+    ("help", "помощь"),
+)
+
+
+def start_greeting(name: str | None) -> str:
+    who = f", {name}" if name else ""
+    return (
+        f"Привет{who}! 👋\n\n"
+        "Я <b>Momentum</b> — помогу вести дневник тренировок.\n"
+        "Записывай тренировку сразу после зала, а я посчитаю статистику "
+        "и буду присылать отчёты за неделю и месяц.\n\n"
+        "Жми <b>➕ Добавить тренировку</b> или /add."
+    )
+
+
+HELP = (
+    "<b>Momentum — дневник тренировок</b>\n\n"
+    "<b>Команды</b>\n"
+    "/add — добавить тренировку\n"
+    "/history — история тренировок (можно редактировать и удалять)\n"
+    "/week — отчёт за текущую неделю\n"
+    "/month — отчёт за текущий месяц\n"
+    "/suggest — предложить улучшение\n"
+    "/reports_on — включить авто-отчёты\n"
+    "/reports_off — выключить авто-отчёты\n"
+    "/cancel — отменить текущее действие\n"
+    "/help — эта справка\n\n"
+    "<b>Как это работает</b>\n"
+    "🏃 Кардио — можно приложить фото-подтверждение.\n"
+    "💪 Силовая — отмечаешь, какие группы мышц качал.\n\n"
+    "Отчёты приходят автоматически: за неделю — в понедельник, "
+    "за месяц — первого числа."
+)
+
+# --------------------------------------------------------------------------
+# Cross-flow controls (cancel / plain-text errors), reused by every flow
+# --------------------------------------------------------------------------
+
+BTN_CANCEL = "✖️ Отмена"
+
+ERR_DATE_FUTURE = "Дата не может быть в будущем"
+ERR_DATE_PARSE = "Не понял дату. Формат: 05.07.2026"
+ERR_TEXT_EXPECTED = "Жду текст сообщением."
+
+CANCELLED = "Отменено"
+NOTHING_TO_CANCEL = "Нечего отменять."

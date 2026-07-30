@@ -1,0 +1,67 @@
+"""Typed ``CallbackData`` factories for every inline keyboard, plus pagination size."""
+
+from __future__ import annotations
+
+from aiogram.filters.callback_data import CallbackData
+
+PAGE_SIZE = 7
+
+
+class ActionCB(CallbackData, prefix="act"):
+    """Generic flow control: cancel, skip, parts_done."""
+
+    name: str
+
+
+class KindCB(CallbackData, prefix="kind"):
+    value: str  # cardio | strength
+
+
+class PartCB(CallbackData, prefix="part"):
+    value: str  # a body part DB value
+
+
+class DateCB(CallbackData, prefix="date"):
+    value: str  # today | yesterday | custom
+
+
+class HistCB(CallbackData, prefix="hist"):
+    action: str  # page | open
+    value: int  # page number, or workout id for `open`
+    page: int = 1  # page to return to from a detail card
+
+
+class WorkoutCB(CallbackData, prefix="wk"):
+    action: str  # desc | date | del | del_yes | back
+    workout_id: int
+    page: int
+
+
+# Admin factories. Distinct `adm_` prefixes so router order never matters, and
+# only ids/filters travel in the payload — never names or free text.
+
+
+class AdminMenuCB(CallbackData, prefix="adm_menu"):
+    section: str  # menu | sug | usr | close
+
+
+class AdminSuggestionCB(CallbackData, prefix="adm_sug"):
+    action: str  # list | open | set
+    status: str  # active list filter: new | done | rejected | all
+    target: str = ""  # new status, `set` only
+    request_id: int = 0
+    page: int = 1
+
+
+class AdminUserCB(CallbackData, prefix="adm_usr"):
+    action: str  # list | open | week | month
+    user_id: int = 0
+    page: int = 1  # users list page
+
+
+class AdminWorkoutCB(CallbackData, prefix="adm_wk"):
+    action: str  # list | open
+    user_id: int
+    workout_id: int = 0
+    page: int = 1  # workouts page
+    users_page: int = 1  # users list page, to walk back out

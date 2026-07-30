@@ -30,9 +30,10 @@ src/momentum/
 ├── keyboards.py       keyboards + callback_data factories
 ├── formatters.py      workout cards + report text
 ├── scheduler.py       cron jobs
+├── auth.py            IsAdmin filter (config allowlist, no DB roles)
 ├── db/                schema.sql, engine.py, repo.py
 ├── services/          periods.py, stats.py, reports.py
-└── handlers/          common, add_workout, history, reports
+└── handlers/          common, add_workout, history, reports, admin
 ```
 
 `services/periods.py` and `services/stats.py` are pure — dates and rows in,
@@ -96,6 +97,7 @@ between the two modes.
 | `WEB_HOST`       | `0.0.0.0`           |                                          |
 | `WEB_PORT`       | `8080`              |                                          |
 | `DB_PATH`        | `data/momentum.db`  | relative paths resolve to the repo root  |
+| `ADMIN_USER_IDS` | —                   | required, JSON list of Telegram ids      |
 | `APP_TZ`         | `Europe/Belgrade`   | weeks and months are computed in this tz |
 | `WEEKLY_GOAL`    | `3`                 | drives the nudge and the streak counter  |
 | `REPORT_HOUR`    | `9`                 | local hour for both broadcasts           |
@@ -114,3 +116,26 @@ between the two modes.
   Saved workouts are unaffected.
 - Reports go only to users with `reports_on = 1`; a user who blocks the bot is
   unsubscribed automatically instead of breaking the broadcast.
+
+## Admin panel
+
+`/admin` opens an inline panel for triaging improvement suggestions (filter by
+`new` / `done` / `rejected` / all, then move a request between statuses) and for
+browsing registered users — their workout history, cardio photos, and weekly and
+monthly reports.
+
+Access is decided **only** by the numeric Telegram ids in `ADMIN_USER_IDS`:
+
+```
+ADMIN_USER_IDS=[123456789]                 # the bot owner
+ADMIN_USER_IDS=[123456789, 987654321]      # add more later, no schema change
+```
+
+A missing, empty, or malformed value stops the bot at startup. Adding or
+removing an id takes effect on restart.
+The check runs on every message *and* every callback, so a screenshotted inline
+button gives a non-admin nothing; they just get an access-denied reply.
+
+Everything an admin sees about another user is read-only: those keyboards emit
+navigation callbacks only, and workout lookups stay scoped by owner id, so a
+workout id paired with the wrong user simply resolves to nothing.

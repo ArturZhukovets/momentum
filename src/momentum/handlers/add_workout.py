@@ -10,12 +10,16 @@ from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message
 
-from momentum import formatters, keyboards, texts
 from momentum.config import settings
-from momentum.db import repo
-from momentum.keyboards import ActionCB, DateCB, KindCB, PartCB
+from momentum.db import workouts as db_workouts
+from momentum.formatters import workout as fmt_workout
+from momentum.keyboards import common as kb_common
+from momentum.keyboards import workout as kb_workout
+from momentum.keyboards.callbacks import ActionCB, DateCB, KindCB, PartCB
 from momentum.services import periods
 from momentum.states import AddWorkout
+from momentum.texts import common as texts_common
+from momentum.texts import workout as texts_workout
 
 log = logging.getLogger(__name__)
 
@@ -55,11 +59,11 @@ async def _drop_prompt_kb(bot: Bot, chat_id: int, state: FSMContext) -> None:
 
 
 @router.message(Command("add"))
-@router.message(F.text == texts.BTN_ADD)
+@router.message(F.text == texts_common.BTN_ADD)
 async def start_add(message: Message, state: FSMContext) -> None:
     await state.clear()
     await state.set_state(AddWorkout.choosing_kind)
-    sent = await message.answer(texts.ASK_KIND, reply_markup=keyboards.kind_kb())
+    sent = await message.answer(texts_workout.ASK_KIND, reply_markup=kb_workout.kind_kb())
     await state.update_data(prompt_id=sent.message_id)
 
 
@@ -70,11 +74,13 @@ async def choose_kind(callback: CallbackQuery, callback_data: KindCB, state: FSM
 
     if callback_data.value == "cardio":
         await state.set_state(AddWorkout.cardio_photo)
-        await _edit_prompt(callback, state, texts.ASK_CARDIO_PHOTO, keyboards.skip_cancel_kb())
+        await _edit_prompt(
+            callback, state, texts_workout.ASK_CARDIO_PHOTO, kb_workout.skip_cancel_kb()
+        )
     else:
         await state.update_data(parts=[])
         await state.set_state(AddWorkout.strength_parts)
-        await _edit_prompt(callback, state, texts.ASK_PARTS, keyboards.parts_kb([]))
+        await _edit_prompt(callback, state, texts_workout.ASK_PARTS, kb_workout.parts_kb([]))
 
 
 # --------------------------------------------------------------------------
@@ -91,7 +97,7 @@ async def cardio_photo(message: Message, state: FSMContext, bot: Bot) -> None:
 
 @router.message(AddWorkout.cardio_photo)
 async def cardio_photo_invalid(message: Message) -> None:
-    await message.answer(texts.ASK_PHOTO_AGAIN)
+    await message.answer(texts_workout.ASK_PHOTO_AGAIN)
 
 
 @router.callback_query(AddWorkout.cardio_photo, ActionCB.filter(F.name == "skip"))
@@ -107,7 +113,9 @@ async def _ask_description(bot: Bot, chat_id: int, state: FSMContext) -> None:
         AddWorkout.cardio_description if kind == "cardio" else AddWorkout.strength_description
     )
     await state.set_state(next_state)
-    await _send_prompt(bot, chat_id, state, texts.ASK_DESCRIPTION, keyboards.skip_cancel_kb())
+    await _send_prompt(
+        bot, chat_id, state, texts_workout.ASK_DESCRIPTION, kb_workout.skip_cancel_kb()
+    )
 
 
 # --------------------------------------------------------------------------
@@ -122,22 +130,22 @@ async def toggle_part(callback: CallbackQuery, callback_data: PartCB, state: FSM
 
     if part in selected:
         selected.remove(part)
-    elif part == texts.FULL_BODY:
-        selected = [texts.FULL_BODY]  # "full body" is exclusive
+    elif part == texts_workout.FULL_BODY:
+        selected = [texts_workout.FULL_BODY]  # "full body" is exclusive
     else:
-        selected = [p for p in selected if p != texts.FULL_BODY]
+        selected = [p for p in selected if p != texts_workout.FULL_BODY]
         selected.append(part)
 
     await state.update_data(parts=selected)
     await callback.answer()
-    await callback.message.edit_reply_markup(reply_markup=keyboards.parts_kb(selected))
+    await callback.message.edit_reply_markup(reply_markup=kb_workout.parts_kb(selected))
 
 
 @router.callback_query(AddWorkout.strength_parts, ActionCB.filter(F.name == "parts_done"))
 async def parts_done(callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
     selected = (await state.get_data()).get("parts", [])
     if not selected:
-        await callback.answer(texts.ASK_PARTS_EMPTY, show_alert=True)
+        await callback.answer(texts_workout.ASK_PARTS_EMPTY, show_alert=True)
         return
 
     await callback.answer()
@@ -159,7 +167,7 @@ async def got_description(message: Message, state: FSMContext, bot: Bot) -> None
 
 @router.message(StateFilter(AddWorkout.cardio_description, AddWorkout.strength_description))
 async def description_invalid(message: Message) -> None:
-    await message.answer(texts.ERR_TEXT_EXPECTED)
+    await message.answer(texts_common.ERR_TEXT_EXPECTED)
 
 
 @router.callback_query(
@@ -175,7 +183,7 @@ async def skip_description(callback: CallbackQuery, state: FSMContext, bot: Bot)
 
 async def _ask_date(bot: Bot, chat_id: int, state: FSMContext) -> None:
     await state.set_state(AddWorkout.choosing_date)
-    await _send_prompt(bot, chat_id, state, texts.ASK_DATE, keyboards.date_kb())
+    await _send_prompt(bot, chat_id, state, texts_workout.ASK_DATE, kb_workout.date_kb())
 
 
 @router.callback_query(AddWorkout.choosing_date, DateCB.filter())
@@ -187,7 +195,7 @@ async def choose_date(
 
     if callback_data.value == "custom":
         await state.set_state(AddWorkout.custom_date)
-        await _edit_prompt(callback, state, texts.ASK_CUSTOM_DATE, keyboards.cancel_kb())
+        await _edit_prompt(callback, state, texts_workout.ASK_CUSTOM_DATE, kb_common.cancel_kb())
         return
 
     performed_on = today if callback_data.value == "today" else today - timedelta(days=1)
@@ -201,10 +209,10 @@ async def custom_date(message: Message, state: FSMContext, bot: Bot) -> None:
     parsed = periods.parse_user_date(message.text, today)
 
     if parsed is None:
-        await message.answer(texts.ERR_DATE_PARSE)
+        await message.answer(texts_common.ERR_DATE_PARSE)
         return
     if parsed > today:
-        await message.answer(texts.ERR_DATE_FUTURE)
+        await message.answer(texts_common.ERR_DATE_FUTURE)
         return
 
     await _drop_prompt_kb(bot, message.chat.id, state)
@@ -213,7 +221,7 @@ async def custom_date(message: Message, state: FSMContext, bot: Bot) -> None:
 
 @router.message(AddWorkout.custom_date)
 async def custom_date_invalid(message: Message) -> None:
-    await message.answer(texts.ERR_DATE_PARSE)
+    await message.answer(texts_common.ERR_DATE_PARSE)
 
 
 # --------------------------------------------------------------------------
@@ -230,7 +238,7 @@ async def _finish(
     kind = data["kind"]
     body_parts = list(data.get("parts", [])) if kind == "strength" else []
 
-    workout_id = await repo.add_workout(
+    workout_id = await db_workouts.add_workout(
         user_id=user_id,
         kind=kind,
         performed_on=performed_on,
@@ -239,11 +247,11 @@ async def _finish(
         body_parts=body_parts,
     )
 
-    workout = await repo.get_workout(user_id, workout_id)
+    workout = await db_workouts.get_workout(user_id, workout_id)
     week_start, week_end = periods.week_bounds(performed_on)
-    done = len(await repo.points_between(user_id, week_start, week_end))
+    done = len(await db_workouts.points_between(user_id, week_start, week_end))
 
-    card = f"{texts.WORKOUT_SAVED}\n\n{formatters.workout_card(workout)}"
-    nudge = texts.weekly_nudge(done, settings.WEEKLY_GOAL)
+    card = f"{texts_workout.WORKOUT_SAVED}\n\n{fmt_workout.workout_card(workout)}"
+    nudge = texts_workout.weekly_nudge(done, settings.WEEKLY_GOAL)
 
-    await bot.send_message(chat_id, f"{card}\n\n{nudge}", reply_markup=keyboards.main_menu())
+    await bot.send_message(chat_id, f"{card}\n\n{nudge}", reply_markup=kb_common.main_menu())

@@ -35,6 +35,9 @@ class Settings(BaseSettings):
 
     DB_PATH: str = "data/momentum.db"
 
+    # JSON list in .env — pydantic-settings decodes collection fields.
+    ADMIN_USER_IDS: frozenset[int]
+
     APP_TZ: str = "Europe/Belgrade"
     WEEKLY_GOAL: int = 3
     REPORT_HOUR: int = 9
@@ -45,6 +48,16 @@ class Settings(BaseSettings):
     @classmethod
     def _validate_tz(cls, value: str) -> str:
         ZoneInfo(value)  # raises for an unknown zone — fail fast at startup
+        return value
+
+    @field_validator("ADMIN_USER_IDS")
+    @classmethod
+    def _validate_admin_ids(cls, value: frozenset[int]) -> frozenset[int]:
+        if not value:
+            raise ValueError("ADMIN_USER_IDS must list at least one Telegram user id")
+        bad = sorted(user_id for user_id in value if user_id <= 0)
+        if bad:
+            raise ValueError(f"ADMIN_USER_IDS contains non-positive id(s): {bad}")
         return value
 
     @model_validator(mode="after")

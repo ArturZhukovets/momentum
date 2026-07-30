@@ -8,17 +8,19 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from aiogram.exceptions import TelegramAPIError
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import BotCommand
+from aiogram.types import BotCommand, BotCommandScopeChat
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
 
-from momentum import texts
 from momentum.config import settings
 from momentum.db.engine import close_db, init_db
-from momentum.handlers import add_workout, common, history, suggestions
+from momentum.handlers import add_workout, admin, common, history, suggestions
 from momentum.handlers import reports as reports_handlers
 from momentum.scheduler import build_scheduler
+from momentum.texts import admin as texts_admin
+from momentum.texts import common as texts_common
 
 log = logging.getLogger(__name__)
 
@@ -38,6 +40,9 @@ def build_dispatcher() -> Dispatcher:
     dp.update.outer_middleware(common.UserMiddleware())
 
     dp.include_router(common.router)
+    # Before the FSM-scoped routers so /admin works mid-flow, like /cancel does.
+    dp.include_router(admin.router)
+    dp.include_router(admin.denied_router)
     dp.include_router(add_workout.router)
     dp.include_router(history.router)
     dp.include_router(reports_handlers.router)
@@ -46,9 +51,22 @@ def build_dispatcher() -> Dispatcher:
 
 
 async def set_commands(bot: Bot) -> None:
-    await bot.set_my_commands(
-        [BotCommand(command=name, description=desc) for name, desc in texts.COMMAND_DESCRIPTIONS]
-    )
+    commands = [
+        BotCommand(command=name, description=desc)
+        for name, desc in texts_common.COMMAND_DESCRIPTIONS
+    ]
+    await bot.set_my_commands(commands)
+
+    # Discoverability only — authorization is the router filter, not the scope.
+    admin_commands = [
+        *commands,
+        BotCommand(command="admin", description=texts_admin.ADMIN_COMMAND_DESCRIPTION),
+    ]
+    for admin_id in sorted(settings.ADMIN_USER_IDS):
+        try:
+            await bot.set_my_commands(admin_commands, scope=BotCommandScopeChat(chat_id=admin_id))
+        except TelegramAPIError:
+            log.warning("Could not register admin commands for %s", admin_id, exc_info=True)
 
 
 # --------------------------------------------------------------------------
