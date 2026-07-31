@@ -2,7 +2,8 @@
 
 Personal Telegram bot for tracking workouts. You log a workout right after
 finishing it — cardio with a photo proof, or strength with body parts — and the
-bot stores it in SQLite and pushes weekly and monthly progress reports.
+bot stores it in SQLite and pushes weekly and monthly progress reports. It also
+keeps an optional profile, a weight goal, and a history of body measurements.
 
 The bot's interface is entirely in Russian; the codebase is in English.
 
@@ -31,9 +32,9 @@ src/momentum/
 ├── formatters.py      workout cards + report text
 ├── scheduler.py       cron jobs
 ├── auth.py            IsAdmin filter (config allowlist, no DB roles)
-├── db/                schema.sql, engine.py, repo.py
+├── db/                schema.sql, engine.py, one module per resource
 ├── services/          periods.py, stats.py, reports.py
-└── handlers/          common, add_workout, history, reports, admin
+└── handlers/          common, add_workout, profile, history, reports, admin
 ```
 
 `services/periods.py` and `services/stats.py` are pure — dates and rows in,
@@ -111,7 +112,16 @@ between the two modes.
   goal, so an in-progress week never breaks a live streak.
 - Cardio photos are stored as Telegram `file_id` only — nothing is written to
   disk.
-- Every workout query is scoped by `user_id`, so ids can't be poked cross-user.
+- `/start` greets, and walks a brand-new user through onboarding (birth date,
+  sex, height, goal, first weight). Every question can be skipped; the
+  `user_profiles` row is what marks onboarding as already offered.
+- `users` holds Telegram identity only. Anything the bot asks about lives in
+  `user_profiles`, `user_goals` and `body_measurements`.
+- One active goal per user, enforced by a partial unique index. Swapping or
+  archiving a goal isn't implemented yet.
+- `/measure` records weight, and optionally waist/chest/hips/thigh/arm, as one
+  append-only row dated today.
+- Every user-owned query is scoped by `user_id`, so ids can't be poked cross-user.
 - FSM state lives in memory: a restart mid-flow drops an unfinished entry.
   Saved workouts are unaffected.
 - Reports go only to users with `reports_on = 1`; a user who blocks the bot is

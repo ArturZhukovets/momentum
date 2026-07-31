@@ -26,6 +26,7 @@ def main_menu() -> ReplyKeyboardMarkup:
                 KeyboardButton(text=texts_common.BTN_WEEK),
                 KeyboardButton(text=texts_common.BTN_MONTH),
             ],
+            [KeyboardButton(text=texts_common.BTN_MEASURE)],
         ],
         resize_keyboard=True,
         is_persistent=True,

@@ -45,7 +45,6 @@ def body_parts_line(parts: tuple[str, ...] | list[str]) -> str:
 
 BTN_CARDIO = "🏃 Кардио"
 BTN_STRENGTH = "💪 Силовая"
-BTN_SKIP = "⏭ Пропустить"
 BTN_DONE = "✅ Готово"
 BTN_TODAY = "Сегодня"
 BTN_YESTERDAY = "Вчера"

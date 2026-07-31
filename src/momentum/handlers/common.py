@@ -6,12 +6,15 @@ import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from aiogram import BaseMiddleware, F, Router
+from aiogram import BaseMiddleware, Bot, F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message, TelegramObject, User
+from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove, TelegramObject, User
 
+from momentum.db import profiles as db_profiles
 from momentum.db import users as db_users
+from momentum.handlers import onboarding as onboarding_handlers
+from momentum.handlers._typing import typing_delay
 from momentum.keyboards import common as kb_common
 from momentum.keyboards.callbacks import ActionCB
 from momentum.texts import common as texts_common
@@ -48,10 +51,23 @@ class UserMiddleware(BaseMiddleware):
 
 
 @router.message(CommandStart())
-async def cmd_start(message: Message, state: FSMContext) -> None:
+async def cmd_start(message: Message, state: FSMContext, bot: Bot) -> None:
+    """Greet, and walk a brand-new user through onboarding.
+
+    A `user_profiles` row — even one holding nothing but nulls — means the
+    questionnaire has already been offered, so /start stays a plain greeting
+    from then on.
+    """
     await state.clear()
     name = message.from_user.first_name if message.from_user else None
-    await message.answer(texts_common.start_greeting(name), reply_markup=kb_common.main_menu())
+    profile = await db_profiles.get_profile(message.from_user.id)
+    if profile:
+        await message.answer(texts_common.start_greeting(name), reply_markup=kb_common.main_menu())
+    else:
+        await message.answer(texts_common.start_greeting(name), reply_markup=ReplyKeyboardRemove())
+        await typing_delay(bot, message.chat.id)
+        await onboarding_handlers.offer_onboarding(message, state)
+   
 
 
 @router.message(Command("help"))
@@ -73,7 +89,8 @@ async def cb_cancel(callback: CallbackQuery, state: FSMContext) -> None:
     """Every ✖️ Отмена button, from any step of any flow."""
     await state.clear()
     await callback.answer()
-    await callback.message.edit_text(texts_common.CANCELLED, reply_markup=None)
+    await callback.message.edit_reply_markup(reply_markup=None)
+    await callback.message.answer(texts_common.CANCELLED, reply_markup=kb_common.main_menu())
 
 
 @router.message(Command("reports_on"))

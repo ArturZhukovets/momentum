@@ -9,6 +9,8 @@ from typing import Literal
 ISO_DATE = "%Y-%m-%d"
 
 ImprovementRequestStatus = Literal["new", "done", "rejected"]
+Sex = Literal["male", "female"]
+GoalType = Literal["lose", "gain", "maintain", "muscle"]
 
 
 @dataclass(frozen=True)
@@ -61,8 +63,54 @@ class ImprovementRequest:
     created_at: datetime
 
 
+@dataclass(frozen=True)
+class UserProfile:
+    """Optional facts the user told us about themselves. Every field is skippable."""
+
+    user_id: int
+    sex: Sex | None
+    birth_date: date | None
+    height_cm: float | None
+
+
+@dataclass(frozen=True)
+class UserGoal:
+    id: int
+    user_id: int
+    goal_type: GoalType
+    start_weight_kg: float | None
+    target_weight_kg: float | None
+    target_date: date | None
+    note: str
+    is_active: bool
+    created_at: datetime
+
+
+@dataclass(frozen=True)
+class BodyMeasurement:
+    id: int
+    user_id: int
+    recorded_on: date
+    weight_kg: float | None
+    waist_cm: float | None
+    chest_cm: float | None
+    hips_cm: float | None
+    thigh_cm: float | None
+    arm_cm: float | None
+    note: str
+    created_at: datetime
+
+
 def to_date(value: str) -> date:
     return datetime.strptime(value, ISO_DATE).date()
+
+
+def to_date_opt(value: str | None) -> date | None:
+    return to_date(value) if value else None
+
+
+def from_date_opt(value: date | None) -> str | None:
+    return value.strftime(ISO_DATE) if value is not None else None
 
 
 def to_datetime(value: str) -> datetime:

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 from datetime import date, timedelta
 
 from aiogram import Bot, F, Router
@@ -13,6 +12,7 @@ from aiogram.types import CallbackQuery, Message
 from momentum.config import settings
 from momentum.db import workouts as db_workouts
 from momentum.formatters import workout as fmt_workout
+from momentum.handlers._prompts import drop_prompt_kb, edit_prompt, send_prompt
 from momentum.keyboards import common as kb_common
 from momentum.keyboards import workout as kb_workout
 from momentum.keyboards.callbacks import ActionCB, DateCB, KindCB, PartCB
@@ -21,36 +21,7 @@ from momentum.states import AddWorkout
 from momentum.texts import common as texts_common
 from momentum.texts import workout as texts_workout
 
-log = logging.getLogger(__name__)
-
 router = Router(name="add_workout")
-
-
-# --------------------------------------------------------------------------
-# Prompt bookkeeping — keeps stale inline keyboards from being re-clicked
-# --------------------------------------------------------------------------
-
-
-async def _send_prompt(bot: Bot, chat_id: int, state: FSMContext, text: str, markup) -> None:
-    sent = await bot.send_message(chat_id, text, reply_markup=markup)
-    await state.update_data(prompt_id=sent.message_id)
-
-
-async def _edit_prompt(callback: CallbackQuery, state: FSMContext, text: str, markup) -> None:
-    await callback.message.edit_text(text, reply_markup=markup)
-    await state.update_data(prompt_id=callback.message.message_id)
-
-
-async def _drop_prompt_kb(bot: Bot, chat_id: int, state: FSMContext) -> None:
-    """Detach the keyboard from the last prompt after the user replied by message."""
-    prompt_id = (await state.get_data()).get("prompt_id")
-    if not prompt_id:
-        return
-    try:
-        await bot.edit_message_reply_markup(chat_id, prompt_id, reply_markup=None)
-    except Exception:  # message too old, already edited, or deleted — harmless
-        log.debug("Could not clear prompt keyboard", exc_info=True)
-    await state.update_data(prompt_id=None)
 
 
 # --------------------------------------------------------------------------
@@ -74,13 +45,13 @@ async def choose_kind(callback: CallbackQuery, callback_data: KindCB, state: FSM
 
     if callback_data.value == "cardio":
         await state.set_state(AddWorkout.cardio_photo)
-        await _edit_prompt(
+        await edit_prompt(
             callback, state, texts_workout.ASK_CARDIO_PHOTO, kb_workout.skip_cancel_kb()
         )
     else:
         await state.update_data(parts=[])
         await state.set_state(AddWorkout.strength_parts)
-        await _edit_prompt(callback, state, texts_workout.ASK_PARTS, kb_workout.parts_kb([]))
+        await edit_prompt(callback, state, texts_workout.ASK_PARTS, kb_workout.parts_kb([]))
 
 
 # --------------------------------------------------------------------------
@@ -90,7 +61,7 @@ async def choose_kind(callback: CallbackQuery, callback_data: KindCB, state: FSM
 
 @router.message(AddWorkout.cardio_photo, F.photo)
 async def cardio_photo(message: Message, state: FSMContext, bot: Bot) -> None:
-    await _drop_prompt_kb(bot, message.chat.id, state)
+    await drop_prompt_kb(bot, message.chat.id, state)
     await state.update_data(photo_file_id=message.photo[-1].file_id)
     await _ask_description(bot, message.chat.id, state)
 
@@ -113,7 +84,7 @@ async def _ask_description(bot: Bot, chat_id: int, state: FSMContext) -> None:
         AddWorkout.cardio_description if kind == "cardio" else AddWorkout.strength_description
     )
     await state.set_state(next_state)
-    await _send_prompt(
+    await send_prompt(
         bot, chat_id, state, texts_workout.ASK_DESCRIPTION, kb_workout.skip_cancel_kb()
     )
 
@@ -160,7 +131,7 @@ async def parts_done(callback: CallbackQuery, state: FSMContext, bot: Bot) -> No
 
 @router.message(StateFilter(AddWorkout.cardio_description, AddWorkout.strength_description), F.text)
 async def got_description(message: Message, state: FSMContext, bot: Bot) -> None:
-    await _drop_prompt_kb(bot, message.chat.id, state)
+    await drop_prompt_kb(bot, message.chat.id, state)
     await state.update_data(description=message.text.strip())
     await _ask_date(bot, message.chat.id, state)
 
@@ -183,7 +154,7 @@ async def skip_description(callback: CallbackQuery, state: FSMContext, bot: Bot)
 
 async def _ask_date(bot: Bot, chat_id: int, state: FSMContext) -> None:
     await state.set_state(AddWorkout.choosing_date)
-    await _send_prompt(bot, chat_id, state, texts_workout.ASK_DATE, kb_workout.date_kb())
+    await send_prompt(bot, chat_id, state, texts_workout.ASK_DATE, kb_workout.date_kb())
 
 
 @router.callback_query(AddWorkout.choosing_date, DateCB.filter())
@@ -195,7 +166,7 @@ async def choose_date(
 
     if callback_data.value == "custom":
         await state.set_state(AddWorkout.custom_date)
-        await _edit_prompt(callback, state, texts_workout.ASK_CUSTOM_DATE, kb_common.cancel_kb())
+        await edit_prompt(callback, state, texts_workout.ASK_CUSTOM_DATE, kb_common.cancel_kb())
         return
 
     performed_on = today if callback_data.value == "today" else today - timedelta(days=1)
@@ -215,7 +186,7 @@ async def custom_date(message: Message, state: FSMContext, bot: Bot) -> None:
         await message.answer(texts_common.ERR_DATE_FUTURE)
         return
 
-    await _drop_prompt_kb(bot, message.chat.id, state)
+    await drop_prompt_kb(bot, message.chat.id, state)
     await _finish(bot, message.chat.id, message.from_user.id, parsed, state)
 
 

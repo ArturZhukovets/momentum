@@ -37,6 +37,27 @@ class WorkoutCB(CallbackData, prefix="wk"):
     page: int
 
 
+# Profile / onboarding factories. `SkipCB` carries the step being skipped so a
+# keyboard left over from an earlier question can't skip the current one.
+
+
+class SkipCB(CallbackData, prefix="skip"):
+    step: str  # the state name the prompt belongs to
+
+
+class SexCB(CallbackData, prefix="sex"):
+    value: str  # male | female
+
+
+class GoalTypeCB(CallbackData, prefix="goal"):
+    value: str  # lose | gain | maintain | muscle
+
+
+class ProfileCB(CallbackData, prefix="prof"):
+    # show | edit_sex | edit_birth | edit_height | new_goal | body_measure | measure_save
+    action: str
+
+
 # Admin factories. Distinct `adm_` prefixes so router order never matters, and
 # only ids/filters travel in the payload — never names or free text.
 

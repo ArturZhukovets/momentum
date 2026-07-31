@@ -14,6 +14,29 @@ def today_in(tz: ZoneInfo) -> date:
     return datetime.now(tz).date()
 
 
+def years_since(start: date, on: date) -> int:
+    """
+    Returns the number of full years between two dates (e.g. age on a given day). Never negative.
+
+    The calculation:
+    - Subtracts start.year from on.year to get the year difference.
+    - Then checks if the current month and day (on.month, on.day) is before the start month and day (start.month, start.day).
+    - The comparison (on.month, on.day) < (start.month, start.day) returns a boolean (True/False), which when used in arithmetic is coerced to 1 or 0.
+      - If the "on" date's month/day is before the "start" anniversary this year, the boolean is True (1), so we subtract an extra year because the full anniversary hasn't occurred yet.
+      - Otherwise, it is False (0) and no extra subtraction occurs.
+    - Result is clamped to 0 (if "on" is before "start", result is 0).
+
+    Example:
+      start: 2010-05-03, on: 2024-05-02
+      on.year - start.year = 14
+      (on.month, on.day) < (start.month, start.day): (5,2)<(5,3) == True (1)
+      years = 14 - 1 = 13
+
+    """
+    years = on.year - start.year - ((on.month, on.day) < (start.month, start.day))
+    return max(years, 0)
+
+
 # --------------------------------------------------------------------------
 # Weeks (Mon–Sun)
 # --------------------------------------------------------------------------

@@ -16,7 +16,18 @@ from aiohttp import web
 
 from momentum.config import settings
 from momentum.db.engine import close_db, init_db
-from momentum.handlers import add_workout, admin, common, history, suggestions
+from momentum.handlers import _profile_common as profile_common_handlers
+from momentum.handlers import (
+    add_workout,
+    admin,
+    common,
+    goal,
+    history,
+    measure,
+    onboarding,
+    suggestions,
+)
+from momentum.handlers import profile as profile_handlers
 from momentum.handlers import reports as reports_handlers
 from momentum.scheduler import build_scheduler
 from momentum.texts import admin as texts_admin
@@ -44,6 +55,13 @@ def build_dispatcher() -> Dispatcher:
     dp.include_router(admin.router)
     dp.include_router(admin.denied_router)
     dp.include_router(add_workout.router)
+    dp.include_router(onboarding.router)
+    dp.include_router(profile_handlers.router)
+    dp.include_router(goal.router)
+    dp.include_router(measure.router)
+    # Last among the profile-family routers: it has no state filter, so it
+    # must only see clicks the ones above didn't already handle.
+    dp.include_router(profile_common_handlers.router)
     dp.include_router(history.router)
     dp.include_router(reports_handlers.router)
     dp.include_router(suggestions.router)

@@ -9,6 +9,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from momentum.keyboards.callbacks import ActionCB, DateCB, KindCB, PartCB
 from momentum.keyboards.common import CANCEL_BUTTON
+from momentum.texts import common as texts_common
 from momentum.texts import workout as texts_workout
 
 
@@ -33,7 +34,7 @@ def skip_cancel_kb() -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text=texts_workout.BTN_SKIP, callback_data=ActionCB(name="skip").pack()
+                    text=texts_common.BTN_SKIP, callback_data=ActionCB(name="skip").pack()
                 )
             ],
             [CANCEL_BUTTON],

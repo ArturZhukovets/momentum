@@ -25,3 +25,36 @@ class EditWorkout(StatesGroup):
 
 class Suggestion(StatesGroup):
     awaiting_text = State()
+
+
+class Onboarding(StatesGroup):
+    """First-run questionnaire. Every step can be skipped."""
+
+    birth_date = State()
+    sex = State()
+    height = State()
+
+    # Also entered from /goal when the user has no active goal yet.
+    goal_type = State()
+    target_weight = State()
+
+    weight = State()
+
+
+class Measure(StatesGroup):
+    """/measure — weight first, then the circumferences on request."""
+
+    weight = State()
+    offering_body = State()
+
+    waist = State()
+    chest = State()
+    hips = State()
+    thigh = State()
+    arm = State()
+
+
+class EditProfile(StatesGroup):
+    sex = State()
+    birth_date = State()
+    height = State()

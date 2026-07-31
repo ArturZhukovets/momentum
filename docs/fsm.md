@@ -98,6 +98,39 @@ The default aiogram strategy is `USER_IN_CHAT`. The dictionary key identifies th
 chat, and user. Therefore, Alice and Bob have separate states, and one user's flow does
 not replace another user's flow.
 
+A simplified mental model of the storage dict:
+
+```python
+# Not exact aiogram internals — the idea
+
+storage = {
+    # key ≈ (bot_id, chat_id, user_id)
+    (123456, 111, 999): {
+        "state": "Onboarding:sex",
+        "data": {
+            "birth_date": date(1990, 3, 15),
+            "prompt_id": 42,
+        },
+    },
+}
+```
+
+After `set_state(Onboarding.height)` and `update_data(height_cm=180)`:
+
+```python
+{
+    "state": "Onboarding:height",   # still exactly one state string
+    "data": {
+        "birth_date": date(1990, 3, 15),
+        "prompt_id": 42,
+        "height_cm": 180,           # merged into the same dict
+    },
+}
+```
+
+`clear()` deletes that whole record (state becomes `None`, data becomes `{}`).
+`StatesGroup` is only a naming helper: `Onboarding.sex` resolves to `"Onboarding:sex"`.
+
 In a private Telegram chat, a simplified view is:
 
 ```text
@@ -151,11 +184,74 @@ This handler requires all of the following:
 2. The current state equals `Suggestion:awaiting_text`.
 3. The message has text.
 
-When an update arrives, the dispatcher checks registered handlers in router and
-registration order. It runs the first matching handler for that event.
+When an update arrives, the dispatcher:
 
-A state marker used in a decorator is therefore a filter. Under the hood it compares the
+1. Looks up this user's FSM slot → current state string (or `None`).
+2. Walks registered handlers and checks their filters.
+3. Runs the first matching handler.
+
+A state marker in a decorator is therefore a filter. Under the hood it compares the
 stored raw state string with its own full state string.
+
+**Only handlers registered for that state — or handlers with no state filter — can run.**
+
+### Handlers that need a specific state
+
+```python
+@router.message(Onboarding.birth_date, F.text)
+async def got_birth_date(...):
+    ...
+
+@router.message(AddWorkout.cardio_photo, F.photo)
+async def cardio_photo(...):
+    ...
+```
+
+If the user is in `Onboarding.birth_date` and sends a photo:
+
+- `cardio_photo` does **not** run (wrong state).
+- `got_birth_date` may not run either (needs text, not photo).
+
+If they send a date string while in `AddWorkout.cardio_photo`:
+
+- `got_birth_date` does **not** run.
+- A same-state fallback like `cardio_photo_invalid` may run instead.
+
+### Handlers with no state filter
+
+These can run **even during a flow**, because they do not care about FSM:
+
+```python
+@router.message(Command("add"))
+async def start_add(...):
+    ...
+
+@router.message(Command("help"))
+async def cmd_help(...):
+    ...
+
+@router.message(Command("week"))
+async def cmd_week(...):
+    ...
+```
+
+So mid-onboarding:
+
+- `/help` still works (`cmd_help` has no state filter).
+- `/add` still works (`start_add` has no state filter) — and Momentum `clear()`s first.
+- Typing a birth date only hits `got_birth_date` **if** state is `Onboarding.birth_date`.
+
+### Tiny picture
+
+```text
+User state = Onboarding:height
+
+Incoming text "180"
+  ✓ @router.message(Onboarding.height, F.text)     → runs
+  ✗ @router.message(Onboarding.birth_date, F.text) → skipped
+  ✗ @router.message(AddWorkout.cardio_photo, ...)  → skipped
+  ✓ @router.message(Command("help"))               → would run if text was /help
+```
 
 Handlers can also filter callback queries from inline buttons:
 
@@ -165,6 +261,76 @@ Handlers can also filter callback queries from inline buttons:
 
 This requires both the correct current state and callback-data format. A button intended
 for another step should not activate this handler.
+
+## Switching flows mid-conversation
+
+There is **one** current state per user (per storage key). `StatesGroup`s do not nest and
+do not run in parallel. Starting another group overwrites the previous step label.
+
+What happens depends on what the new command does.
+
+### A) New flow calls `clear()` then `set_state(...)` (Momentum's pattern)
+
+Almost every entry point does this, for example `/add`:
+
+```python
+await state.clear()
+await state.set_state(AddWorkout.choosing_kind)
+```
+
+If the user is in `Onboarding.sex` and runs `/add`:
+
+1. Onboarding state and all FSM data are wiped.
+2. State becomes `AddWorkout:choosing_kind`.
+3. Onboarding handlers no longer match.
+4. Onboarding is abandoned (in Momentum, profile/goal rows are written only at the end).
+
+### B) Someone only calls `set_state(...)` without `clear()`
+
+Then:
+
+- Current state is **replaced** (still only one state).
+- FSM **data is kept** — old keys from the previous flow can leak into the new one.
+- Old prompt keyboards may still be on screen unless the bot also detaches them.
+
+Hypothetical bad entry (Momentum usually `clear()`s first):
+
+```python
+# User is mid-onboarding:
+# state = "Onboarding:sex"
+# data  = {"birth_date": date(1990, 3, 15), "sex": "male", "prompt_id": 42}
+
+async def bad_start_add(message, state):
+    # NO clear()
+    await state.set_state(AddWorkout.choosing_kind)
+    await state.update_data(prompt_id=99)
+```
+
+After that:
+
+```python
+{
+    "state": "AddWorkout:choosing_kind",  # replaced — only one state
+    "data": {
+        "birth_date": date(1990, 3, 15),  # leftover from onboarding
+        "sex": "male",                    # leftover
+        "prompt_id": 99,                  # overwritten
+    },
+}
+```
+
+Effects:
+
+- Onboarding handlers stop matching (state is no longer `Onboarding:*`).
+- Add-workout continues with a polluted data dict.
+- Later `get_data()` may still see `birth_date` / `sex` and confuse finish/save logic
+  if the new flow assumed a clean dict.
+
+### C) New command does not touch FSM at all
+
+If a handler neither clears nor sets state, the user **stays** in the old flow. Their
+next text or callback may still hit that flow's handlers. `/help` and `/week` are
+examples: they answer without abandoning the unfinished conversation.
 
 ## Suggestion flow
 
@@ -393,10 +559,12 @@ Several entry points deliberately call `state.clear()`:
 - the Cancel inline button
 - starting `/add`
 - starting `/suggest`
+- starting `/measure` and related profile/goal entries
 - opening history or a workout
 - successfully completing a flow
 
-This prevents data from an old unfinished flow from leaking into a new one.
+This is the safe half of "Switching flows mid-conversation" above: wipe first, then start
+clean. Without `clear()`, `set_state()` alone would keep the old data dict.
 
 For example, if a user begins adding a strength workout and then sends `/suggest`, the
 partially collected workout fields are discarded before the suggestion flow starts.
