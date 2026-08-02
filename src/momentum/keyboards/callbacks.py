@@ -55,7 +55,12 @@ class GoalTypeCB(CallbackData, prefix="goal"):
 
 class ProfileCB(CallbackData, prefix="prof"):
     # show | edit_sex | edit_birth | edit_height | new_goal | body_measure | measure_save
+    # | measure_confirm | measure_edit
     action: str
+
+
+class MeasureFieldCB(CallbackData, prefix="mfield"):
+    field: str  # weight_kg | chest_cm | waist_cm | hips_cm | thigh_cm | arm_cm — which to redo
 
 
 # Admin factories. Distinct `adm_` prefixes so router order never matters, and

@@ -126,19 +126,64 @@ def goal_card(goal: UserGoal, current_weight_kg: float | None) -> str:
 # --------------------------------------------------------------------------
 
 
-def measurement_card(measurement: BodyMeasurement) -> str:
-    lines = [
-        f"{texts_profile.MEASURE_TITLE} — {texts_common.fmt_date(measurement.recorded_on)}",
-    ]
-    if measurement.weight_kg is not None:
-        lines.append(f"{texts_profile.LABEL_WEIGHT}: {_kg(measurement.weight_kg)}")
+def _measurement_value_lines(
+    *,
+    weight_kg: float | None,
+    chest_cm: float | None,
+    waist_cm: float | None,
+    hips_cm: float | None,
+    thigh_cm: float | None,
+    arm_cm: float | None,
+) -> list[str]:
+    lines = []
+    if weight_kg is not None:
+        lines.append(f"{texts_profile.LABEL_WEIGHT}: {_kg(weight_kg)}")
 
     circumferences = (
-        (texts_profile.LABEL_WAIST, measurement.waist_cm),
-        (texts_profile.LABEL_CHEST, measurement.chest_cm),
-        (texts_profile.LABEL_HIPS, measurement.hips_cm),
-        (texts_profile.LABEL_THIGH, measurement.thigh_cm),
-        (texts_profile.LABEL_ARM, measurement.arm_cm),
+        (texts_profile.LABEL_CHEST, chest_cm),
+        (texts_profile.LABEL_WAIST, waist_cm),
+        (texts_profile.LABEL_HIPS, hips_cm),
+        (texts_profile.LABEL_THIGH, thigh_cm),
+        (texts_profile.LABEL_ARM, arm_cm),
     )
     lines.extend(f"{label}: {_cm(value)}" for label, value in circumferences if value is not None)
+    return lines
+
+
+def measurement_card(measurement: BodyMeasurement) -> str:
+    lines = [f"{texts_profile.MEASURE_TITLE} — {texts_common.fmt_date(measurement.recorded_on)}"]
+    lines.extend(
+        _measurement_value_lines(
+            weight_kg=measurement.weight_kg,
+            chest_cm=measurement.chest_cm,
+            waist_cm=measurement.waist_cm,
+            hips_cm=measurement.hips_cm,
+            thigh_cm=measurement.thigh_cm,
+            arm_cm=measurement.arm_cm,
+        )
+    )
+    return "\n".join(lines)
+
+
+def measurement_review_card(
+    *,
+    weight_kg: float | None,
+    chest_cm: float | None,
+    waist_cm: float | None,
+    hips_cm: float | None,
+    thigh_cm: float | None,
+    arm_cm: float | None,
+) -> str:
+    """Same layout as `measurement_card`, but for values not yet saved (no date)."""
+    lines = [texts_profile.MEASURE_TITLE]
+    lines.extend(
+        _measurement_value_lines(
+            weight_kg=weight_kg,
+            chest_cm=chest_cm,
+            waist_cm=waist_cm,
+            hips_cm=hips_cm,
+            thigh_cm=thigh_cm,
+            arm_cm=arm_cm,
+        )
+    )
     return "\n".join(lines)

@@ -5,7 +5,7 @@ from __future__ import annotations
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from momentum.keyboards.callbacks import GoalTypeCB, ProfileCB, SexCB, SkipCB
+from momentum.keyboards.callbacks import GoalTypeCB, MeasureFieldCB, ProfileCB, SexCB, SkipCB
 from momentum.keyboards.common import CANCEL_BUTTON
 from momentum.texts import common as texts_common
 from momentum.texts import profile as texts_profile
@@ -125,3 +125,33 @@ def offer_body_measure_kb() -> InlineKeyboardMarkup:
             ],
         ]
     )
+
+
+def measure_review_kb() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=texts_profile.BTN_MEASURE_CONFIRM,
+                    callback_data=ProfileCB(action="measure_confirm").pack(),
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text=texts_profile.BTN_MEASURE_EDIT,
+                    callback_data=ProfileCB(action="measure_edit").pack(),
+                )
+            ],
+        ]
+    )
+
+
+def measure_edit_fields_kb(fields: list[str]) -> InlineKeyboardMarkup:
+    """One button per already-answered field, in collection order."""
+    builder = InlineKeyboardBuilder()
+    for field in fields:
+        builder.button(
+            text=texts_profile.measure_field_label(field), callback_data=MeasureFieldCB(field=field)
+        )
+    builder.adjust(2)
+    return builder.as_markup()

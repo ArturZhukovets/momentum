@@ -102,7 +102,7 @@ BTN_ADD = "➕ Добавить тренировку"
 BTN_HISTORY = "📜 История"
 BTN_WEEK = "📊 Неделя"
 BTN_MONTH = "🗓 Месяц"
-BTN_MEASURE = "⚖️ Замеры"
+BTN_MEASURE = "📝 Записать вес и сделать замеры"
 
 COMMAND_DESCRIPTIONS: tuple[tuple[str, str], ...] = (
     ("start", "начать"),
@@ -110,7 +110,7 @@ COMMAND_DESCRIPTIONS: tuple[tuple[str, str], ...] = (
     ("history", "история"),
     ("week", "отчёт за неделю"),
     ("month", "отчёт за месяц"),
-    ("measure", "записать вес и обмеры"),
+    ("measure", "записать текущий вес и сделать замеры"),
     ("goal", "моя цель"),
     ("profile", "профиль"),
     ("suggest", "предложить улучшение"),

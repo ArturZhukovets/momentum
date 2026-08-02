@@ -47,11 +47,14 @@ class Measure(StatesGroup):
     weight = State()
     offering_body = State()
 
-    waist = State()
     chest = State()
+    waist = State()
     hips = State()
     thigh = State()
     arm = State()
+
+    review = State()
+    choosing_field = State()
 
 
 class EditProfile(StatesGroup):

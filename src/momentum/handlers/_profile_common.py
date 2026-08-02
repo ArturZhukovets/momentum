@@ -14,7 +14,7 @@ from aiogram import Router
 from aiogram.types import CallbackQuery, Message
 
 from momentum.config import settings
-from momentum.keyboards.callbacks import GoalTypeCB, ProfileCB, SexCB, SkipCB
+from momentum.keyboards.callbacks import GoalTypeCB, MeasureFieldCB, ProfileCB, SexCB, SkipCB
 from momentum.services import periods
 from momentum.texts import common as texts_common
 from momentum.texts import profile as texts_profile
@@ -83,6 +83,7 @@ async def read_birth_date(message: Message) -> date | None:
 @router.callback_query(SexCB.filter())
 @router.callback_query(GoalTypeCB.filter())
 @router.callback_query(ProfileCB.filter())
+@router.callback_query(MeasureFieldCB.filter())
 async def ignore_stale_click(callback: CallbackQuery) -> None:
     """A button from a flow that has since ended — dismiss the spinner quietly."""
     await callback.answer()

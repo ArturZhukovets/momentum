@@ -119,24 +119,67 @@ def goal_progress_line(done: str, span: str, pct: int) -> str:
 
 MEASURE_TITLE = "📏 <b>Замер</b>"
 
-ASK_MEASURE_WEIGHT = "Сколько весишь? В килограммах (например, 82,5)."
-ASK_WAIST = "Талия в сантиметрах."
-ASK_CHEST = "Грудь в сантиметрах."
-ASK_HIPS = "Бёдра (обхват) в сантиметрах."
-ASK_THIGH = "Бедро в сантиметрах."
-ASK_ARM = "Рука (бицепс) в сантиметрах."
+MEASURE_ALREADY_TODAY = "Замер на сегодня уже есть, следующий замер можно сделать только завтра!\n\nВот что записано:"
 
-OFFER_BODY_MEASURE = "Записал вес. Добавим обхваты?"
+ASK_MEASURE_WEIGHT = "Укажи свой текущий вес в килограммах (например, 82,5)."
+ASK_CHEST = "Обхват груди в сантиметрах (например, 90)"
+ASK_WAIST = "Обхват талии в сантиметрах (например, 70)"
+ASK_HIPS = "Обхват ягодиц в сантиметрах (например, 95)"
+ASK_THIGH = "Обхват одного бедра в сантиметрах (например, 55)"
+ASK_ARM = "Обхват руки в сантиметрах (например, 30)"
 
-BTN_BODY_MEASURE = "📐 Добавить замеры тела (для тру хардкорщиков)"
-BTN_MEASURE_SAVE = "✅ Сохранить"
+OFFER_BODY_MEASURE = "Отлично! Записал текущий вес.\nХочешь замерить обхваты? Замеры помогут отслеживать прогресс даже если вес стоит на месте."
+
+BTN_BODY_MEASURE = "📐 Да, хочу замерить"
+BTN_MEASURE_SAVE = "➡️ Нет, сохраним только вес"
+
+MEASURE_GUIDE = (
+    "Для начала, небольшой гайд как правильно измерять обхваты:\n\n"
+    "📏 Меряем сантиметровой лентой, ответ — число в сантиметрах "
+    "(можно с дробной частью, например 27,5)\n\n"
+    "Грудь — в самом широком месте, талию — в самом узком\n\n"
+    "Ягодицы, бедро и руку — в самой широкой части\n\n"
+    "❗️ Важно каждый раз мерить в одном и том же месте — так легче отследить прогресс"
+)
+
+MEASURE_REVIEW_HINT = "Проверь, всё ли верно, перед сохранением:"
+
+BTN_MEASURE_CONFIRM = "✅ Всё верно, сохранить"
+BTN_MEASURE_EDIT = "✏️ Изменить"
+
+MEASURE_EDIT_PROMPT = "Что поправить?"
 
 LABEL_WEIGHT = "Вес"
 LABEL_WAIST = "Талия"
 LABEL_CHEST = "Грудь"
-LABEL_HIPS = "Бёдра"
+LABEL_HIPS = "Ягодицы"
 LABEL_THIGH = "Бедро"
 LABEL_ARM = "Рука"
+
+# Order mirrors the collection order (weight -> chest -> waist -> hips -> thigh -> arm)
+# so the review card and the "what to fix" keyboard both read top-to-bottom consistently.
+MEASURE_FIELDS: tuple[str, ...] = (
+    "weight_kg",
+    "chest_cm",
+    "waist_cm",
+    "hips_cm",
+    "thigh_cm",
+    "arm_cm",
+)
+
+MEASURE_FIELD_LABELS: dict[str, str] = {
+    "weight_kg": LABEL_WEIGHT,
+    "chest_cm": LABEL_CHEST,
+    "waist_cm": LABEL_WAIST,
+    "hips_cm": LABEL_HIPS,
+    "thigh_cm": LABEL_THIGH,
+    "arm_cm": LABEL_ARM,
+}
+
+
+def measure_field_label(value: str) -> str:
+    return MEASURE_FIELD_LABELS.get(value, value)
+
 
 MEASURE_SAVED = "✅ Замер сохранён."
 MEASURE_EMPTY = "Ни одного значения — записывать нечего."
