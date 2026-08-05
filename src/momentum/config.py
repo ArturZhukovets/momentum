@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     WEBHOOK_SECRET: SecretStr = SecretStr("")
     WEB_HOST: str = "0.0.0.0"
     WEB_PORT: int = 8080
+    INTERNAL_API_KEY: SecretStr = SecretStr("")
 
     DB_PATH: str = "data/momentum.db"
 

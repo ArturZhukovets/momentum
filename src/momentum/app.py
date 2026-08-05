@@ -14,6 +14,7 @@ from aiogram.types import BotCommand, BotCommandScopeChat
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from aiohttp import web
 
+from momentum import api
 from momentum.config import settings
 from momentum.db.engine import close_db, init_db
 from momentum.handlers import _profile_common as profile_common_handlers
@@ -106,6 +107,7 @@ async def run_webhook(bot: Bot, dp: Dispatcher) -> None:
         app, path=settings.WEBHOOK_PATH
     )
     setup_application(app, dp, bot=bot)
+    api.register(app)
 
     await bot.set_webhook(
         settings.webhook_url,
