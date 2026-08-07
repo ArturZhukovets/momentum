@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "tasks": [
+    {
+      "id": 1,
+      "status": "drafted",
+      "title": "Add cardio types (running, swimming, elliptical, walking)",
+      "spec": "docs/tasks/001-dobavit-vidy-kardio-tipa-beg-plavanie-ellipsoid.md",
+      "source": {
+        "user_full_name": "Maria",
+        "created_at": "2026-07-26T11:29:05+00:00",
+        "request_text": "Добавить виды кардио типа\nБег, плавание, эллипсоид, ходьба"
+      },
+      "synced_at": "2026-08-05T19:03:40Z",
+      "drafted_at": "2026-08-06T10:53:30Z",
+      "attempts": 0,
+      "last_error": null
+    },
+    {
+      "id": 2,
+      "status": "drafted",
+      "title": "Improve measurement-flow copy: frequency note, imperative prompts, \"parameters\" label",
+      "spec": "docs/tasks/002-v-soobschenii-gde-gayd-po-zameram-dobavit-esche.md",
+      "source": {
+        "user_full_name": "Maria",
+        "created_at": "2026-08-02T16:55:16+00:00",
+        "request_text": "В сообщении, где гайд по замерам\nДобавить еще текст \nЗамеры желательно но делать раз в неделю утром и натощак❗️\n\nИ сразу после этого сообщения выходит текст «обхват груди в сантиметрах», добавить слово «УКАЖИТЕ обхват груди в см», возможно во всех сообщ можно добавить это слово \n\nМэйби заменить «замер сохранен» на «Ваши параметры»"
+      },
+      "synced_at": "2026-08-05T19:03:40Z",
+      "drafted_at": "2026-08-06T10:54:23Z",
+      "attempts": 0,
+      "last_error": null
+    },
+    {
+      "id": 3,
+      "status": "rejected",
+      "title": "Add optional cardio metrics (duration, steps, calories)",
+      "spec": "docs/tasks/003-vidy-kardio-beg-hodba-ellipsoid-ili-propustit-et.md",
+      "source": {
+        "user_full_name": "Maria",
+        "created_at": "2026-08-02T17:00:56+00:00",
+        "request_text": "Виды кардио:\nБег, ходьба, эллипсоид\nИли пропустить этот шаг с добавлением вида (вести только тем кому интересно)\n\nВводить количество минут, шагов и потраченных калорий (или пропустить этот шаг (оставить только выбранный вид кардио, если нечем отследить это))"
+      },
+      "synced_at": "2026-08-05T19:03:40Z",
+      "drafted_at": "2026-08-06T10:56:48Z",
+      "attempts": 0,
+      "last_error": null
+    }
+  ]
+}
