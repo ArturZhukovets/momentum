@@ -15,6 +15,9 @@ COPY pyproject.toml uv.lock README.md ./
 RUN uv sync --frozen --no-dev --no-install-project
 
 COPY src/ ./src/
+# Alembic owns the schema and runs at boot — the image needs both.
+COPY alembic.ini ./
+COPY alembic/ ./alembic/
 RUN uv sync --frozen --no-dev
 
 RUN useradd --create-home --uid 1000 momentum \

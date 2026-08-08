@@ -3,7 +3,7 @@
   "tasks": [
     {
       "id": 1,
-      "status": "drafted",
+      "status": "accepted",
       "title": "Add cardio types (running, swimming, elliptical, walking)",
       "spec": "docs/tasks/001-dobavit-vidy-kardio-tipa-beg-plavanie-ellipsoid.md",
       "source": {

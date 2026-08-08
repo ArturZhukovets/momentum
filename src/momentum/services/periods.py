@@ -20,9 +20,13 @@ def years_since(start: date, on: date) -> int:
 
     The calculation:
     - Subtracts start.year from on.year to get the year difference.
-    - Then checks if the current month and day (on.month, on.day) is before the start month and day (start.month, start.day).
-    - The comparison (on.month, on.day) < (start.month, start.day) returns a boolean (True/False), which when used in arithmetic is coerced to 1 or 0.
-      - If the "on" date's month/day is before the "start" anniversary this year, the boolean is True (1), so we subtract an extra year because the full anniversary hasn't occurred yet.
+    - Then checks if the current month and day (on.month, on.day) is before the start
+      month and day (start.month, start.day).
+    - The comparison (on.month, on.day) < (start.month, start.day) returns a boolean
+      (True/False), which when used in arithmetic is coerced to 1 or 0.
+      - If the "on" date's month/day is before the "start" anniversary this year, the
+        boolean is True (1), so we subtract an extra year because the full anniversary
+        hasn't occurred yet.
       - Otherwise, it is False (0) and no extra subtraction occurs.
     - Result is clamped to 0 (if "on" is before "start", result is 0).
 
