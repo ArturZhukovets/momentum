@@ -17,6 +17,7 @@ from aiohttp import web
 from momentum import api
 from momentum.config import settings
 from momentum.db.engine import close_db, init_db
+from momentum.db.migrate import upgrade_to_head
 from momentum.handlers import _profile_common as profile_common_handlers
 from momentum.handlers import (
     add_workout,
@@ -136,6 +137,7 @@ async def run_webhook(bot: Bot, dp: Dispatcher) -> None:
 
 async def main() -> None:
     setup_logging()
+    await upgrade_to_head()
     await init_db()
 
     bot = Bot(

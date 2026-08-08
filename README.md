@@ -14,7 +14,8 @@ The bot's interface is entirely in Russian; the codebase is in English.
 | Runtime        | Python 3.13, fully async                   |
 | Packaging      | uv (`pyproject.toml` + `uv.lock`)          |
 | Bot            | aiogram 3 (native FSM, aiohttp webhook)    |
-| DB             | aiosqlite + hand-written SQL               |
+| DB             | SQLAlchemy 2.0 async + aiosqlite           |
+| Migrations     | Alembic (`render_as_batch`, run at boot)   |
 | Scheduling     | APScheduler `AsyncIOScheduler`             |
 | Config         | python-dotenv + pydantic-settings          |
 | TLS / ingress  | nginx on the host (already running)        |
@@ -32,7 +33,8 @@ src/momentum/
 ├── formatters.py      workout cards + report text
 ├── scheduler.py       cron jobs
 ├── auth.py            IsAdmin filter (config allowlist, no DB roles)
-├── db/                schema.sql, engine.py, one module per resource
+├── db/                tables.py (ORM), models.py (dataclasses), engine.py,
+│                   migrate.py, one query module per resource
 ├── services/          periods.py, stats.py, reports.py
 └── handlers/          common, add_workout, profile, history, reports, admin
 ```
@@ -49,8 +51,17 @@ uv sync
 uv run python -m momentum
 ```
 
-The DB is created at `data/momentum.db` on first start; `schema.sql` is applied
-idempotently on every boot (that is the whole migration story for now).
+The DB is created at `data/momentum.db` on first start and Alembic runs
+`upgrade head` on every boot, so a new checkout and an existing database both
+just work. A database created before Alembic existed is auto-stamped at the
+baseline revision instead of being re-created.
+
+Schema changes go through Alembic — edit `src/momentum/db/tables.py`, then:
+
+```bash
+uv run alembic revision --autogenerate -m "what changed"
+uv run alembic upgrade head      # optional; the bot does this at boot
+```
 
 Inspect it with:
 

@@ -6,7 +6,8 @@ model: sonnet
 ---
 
 You turn **one high-level idea** into a concrete, implementation-ready plan for Momentum, a
-personal Telegram workout-tracking bot (aiogram 3 + aiosqlite + APScheduler, Python 3.13).
+personal Telegram workout-tracking bot (aiogram 3 + SQLAlchemy 2.0/Alembic + APScheduler,
+Python 3.13).
 You investigate and write one markdown file. You never edit source code.
 
 You are given the idea text (usually Russian, often vague), optionally a suggestion id and
@@ -40,9 +41,10 @@ a target path. If no target path is given, write to `docs/tasks/<kebab-slug>.md`
 - The plan is in **English** even though the idea is Russian. Quote the original verbatim.
 - User-facing copy is Russian and lives only in `texts/` — say which submodule needs which
   new string and describe it in English. Do not inline Russian anywhere else.
-- All SQL lives in `db/`, split by resource, scoped by `user_id`. Schema changes go in
-  `schema.sql` and must stay idempotent (`CREATE ... IF NOT EXISTS`) — it is re-applied on
-  every boot.
+- All queries live in `db/`, split by resource, scoped by `user_id`, written with
+  SQLAlchemy Core against the ORM models in `db/tables.py` and returning the frozen
+  dataclasses from `db/models.py`. Schema changes mean editing `db/tables.py` plus an
+  Alembic revision (`alembic revision --autogenerate`); there is no `schema.sql`.
 - If the idea is ambiguous, pick the most reasonable reading, say which one you picked, and
   list the alternatives under open questions. Do not silently invent requirements.
 

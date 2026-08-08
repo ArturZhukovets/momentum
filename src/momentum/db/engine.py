@@ -1,58 +1,80 @@
-"""Single shared aiosqlite connection + migrate-on-start.
+"""The async engine + session factory.
 
-Three settings are applied before the connection is used:
+Two PRAGMAs are re-applied on *every* pooled connection via a ``connect``
+event hook, not once at startup — both are per-connection settings, so a
+connection the pool opens later would otherwise come up without them:
 
+* ``PRAGMA foreign_keys=ON`` — SQLite ignores REFERENCES unless this is
+  enabled per connection; without it ON DELETE CASCADE silently does nothing.
 * ``PRAGMA journal_mode=WAL`` — readers and the writer stop blocking each
   other, which matters when the scheduler's report broadcast overlaps with a
   user logging a workout.
-* ``PRAGMA foreign_keys=ON`` — SQLite ignores REFERENCES unless this is
-  enabled *per connection*; without it ON DELETE CASCADE silently does nothing.
-* ``row_factory = aiosqlite.Row`` — rows become subscriptable by column name.
+
+Sessions are per db-function: each function in the sibling modules opens
+``async with new_session() as s:`` and commits. Nothing needs a
+transaction spanning several of them.
 """
 
 from __future__ import annotations
 
 import logging
-from pathlib import Path
+from typing import Any
 
-import aiosqlite
+from sqlalchemy import event
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from momentum.config import settings
 
 log = logging.getLogger(__name__)
 
-SCHEMA_PATH = Path(__file__).with_name("schema.sql")
+_engine: AsyncEngine | None = None
+_session_factory: async_sessionmaker | None = None
 
-_conn: aiosqlite.Connection | None = None
 
-
-def conn() -> aiosqlite.Connection:
-    """The shared connection. Raises if the DB was never initialised."""
-    if _conn is None:
+def engine() -> AsyncEngine:
+    """The shared engine. Raises if the DB was never initialised."""
+    if _engine is None:
         raise RuntimeError("Database is not initialised — call init_db() first")
-    return _conn
+    return _engine
 
 
-async def init_db() -> aiosqlite.Connection:
-    global _conn
+def new_session() -> AsyncSession:
+    """A fresh session. Raises if the DB was never initialised."""
+    if _session_factory is None:
+        raise RuntimeError("Database is not initialised — call init_db() first")
+    return _session_factory()
+
+
+def _apply_pragmas(dbapi_conn: Any, _record: Any) -> None:
+    cur = dbapi_conn.cursor()
+    cur.execute("PRAGMA journal_mode=WAL")
+    cur.execute("PRAGMA foreign_keys=ON")
+    cur.close()
+
+
+async def init_db() -> AsyncEngine:
+    """Build the engine and session factory. Schema is Alembic's job — see db/migrate.py."""
+    global _engine, _session_factory
 
     db_file = settings.db_file
     db_file.parent.mkdir(parents=True, exist_ok=True)
 
-    _conn = await aiosqlite.connect(db_file)
-    _conn.row_factory = aiosqlite.Row
-    await _conn.execute("PRAGMA journal_mode=WAL")
-    await _conn.execute("PRAGMA foreign_keys=ON")
-
-    await _conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
-    await _conn.commit()
+    _engine = create_async_engine(f"sqlite+aiosqlite:///{db_file}")
+    event.listen(_engine.sync_engine, "connect", _apply_pragmas)
+    _session_factory = async_sessionmaker(_engine, expire_on_commit=False)
 
     log.info("Database ready at %s", db_file)
-    return _conn
+    return _engine
 
 
 async def close_db() -> None:
-    global _conn
-    if _conn is not None:
-        await _conn.close()
-        _conn = None
+    global _engine, _session_factory
+    if _engine is not None:
+        await _engine.dispose()
+        _engine = None
+        _session_factory = None
