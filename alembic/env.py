@@ -6,14 +6,6 @@ one source of truth for where the DB lives, so the CLI and the at-boot
 
 ``render_as_batch=True`` matters: SQLite can't ALTER most things, and batch
 mode is what lets a migration rename or retype a column at all.
-
-Note that batch mode rebuilds a table from its *reflected* DDL, and SQLAlchemy's
-SQLite reflector cannot read ``ON DELETE`` from the inline
-``REFERENCES users(user_id) ON DELETE CASCADE`` column syntax — only from a
-table-level ``FOREIGN KEY``. Every table here is created by a migration, so the
-DDL is always the table-level spelling and the cascade survives. A database
-built by some other means must be rebuilt (see docs/db-rebuild.md) before it is
-migrated, or batch mode will quietly drop its cascades.
 """
 
 from logging.config import fileConfig

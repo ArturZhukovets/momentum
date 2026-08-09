@@ -5,7 +5,7 @@ The old database was created by a hand-written `schema.sql` whose column types
 what the models declare. Alembic cannot fully reflect that DDL, so the database
 is rebuilt once: dump the data, delete the file, let Alembic create the schema,
 replay the data. **No values change** — only the declared types.
-
+a
 Do this once. `db/migrate.py` refuses to start the bot until it is done.
 
 ## Procedure

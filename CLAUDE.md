@@ -19,6 +19,11 @@ uv run ruff check .           # lint (set: E,F,I,UP,B,SIM, py313)
 uv run ruff format .          # format (line length 100)
 sqlite3 data/momentum.db "select * from workouts;"   # inspect the DB
 
+uv run alembic revision --autogenerate -m "..."      # new migration from db/tables.py
+uv run alembic upgrade head                          # apply (the bot also does this at boot)
+uv run alembic current                               # which revision this DB is on
+```
+
 No test suite exists. Server (webhook) run is `docker compose up -d --build` behind host
 nginx; see [README.md](README.md) for the webhook/TLS setup and full env-var table.
 
@@ -95,24 +100,19 @@ Typed `CallbackData` factories live in `keyboards/callbacks.py` (`ActionCB`,
 
 ## Conventions & gotchas
 
-- **Alembic owns the schema.** There is no `schema.sql`. Change `db/tables.py`, then
+- **Alembic owns the schema.** Change `db/tables.py`, then
  `alembic revision --autogenerate`, then read the generated file before committing it.
  `db/migrate.py` runs `upgrade head` from `app.main()` before `init_db()`, so a plain
  `docker compose up` migrates itself.
 - `env.py` passes **`render_as_batch=True`** — SQLite can't `ALTER` most things, and batch
  mode is what makes a column rename or retype possible at all.
-- **Every database must be built by Alembic, never by hand or by `create_all`.** Batch
- mode rebuilds a table from its *reflected* DDL, and SQLAlchemy's SQLite reflector cannot
- read `ON DELETE` from the inline `REFERENCES users(user_id) ON DELETE CASCADE` column
- syntax — only from a table-level `FOREIGN KEY`. A hand-written table therefore looks
- cascade-less to Alembic, and the first batch migration touching it would silently drop
- the cascade. It also made `--autogenerate` report ~33 phantom diffs every run. Both are
- gone now that the databases are Alembic-built, so `--autogenerate` on an unchanged model
- correctly produces an empty migration. `db/migrate.py` **refuses to start** against a
- database that has tables but no `alembic_version` rather than stamping it;
- [docs/db-rebuild.md](docs/db-rebuild.md) is the dump → drop → `upgrade head` → reload
- procedure, driven by `scripts/dump_data.py` and `scripts/load_data.py` (stdlib only when
- `--db` is passed).
+- **Every database is built by Alembic, never by hand or by `create_all`.** Batch mode
+ rebuilds a table from its *reflected* DDL, and SQLAlchemy's SQLite reflector can't read
+ `ON DELETE` from the inline `REFERENCES users(user_id) ON DELETE CASCADE` column syntax —
+ only from a table-level `FOREIGN KEY`, which is what the migrations emit. Create a table
+ any other way and the first batch migration touching it would silently drop its cascade.
+ `--autogenerate` against unchanged models must produce an empty migration; anything else
+ means real drift.
 - Dates are `Date` columns holding `'YYYY-MM-DD'`; SQLAlchemy converts to/from `date`, so
  `db/` hands out real `date` objects and no manual parsing is needed. **`created_at` /
  `updated_at` are `Text`, not `DateTime`** — they hold `now_iso()` output

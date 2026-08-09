@@ -1,9 +1,5 @@
 # Workout types with per-type field sets
 
-> **Depends on:** the SQLAlchemy + Alembic migration. This plan assumes ORM models and a
-> working `alembic upgrade head` already exist, and that `CLAUDE.md`'s "db/ holds ALL SQL,
-> hand-written, no ORM" rule has been rewritten accordingly.
-
 ## Idea
 Replace the binary `kind` (`cardio` | `strength`) with a real **workout type**, and let each
 type define its own set of questions the bot asks when logging.
