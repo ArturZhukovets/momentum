@@ -44,7 +44,7 @@ a target path. If no target path is given, write to `docs/tasks/<kebab-slug>.md`
 - All queries live in `db/`, split by resource, scoped by `user_id`, written with
   SQLAlchemy Core against the ORM models in `db/tables.py` and returning the frozen
   dataclasses from `db/models.py`. Schema changes mean editing `db/tables.py` plus an
-  Alembic revision (`alembic revision --autogenerate`); there is no `schema.sql`.
+  Alembic revision (`alembic revision --autogenerate`), which owns the schema outright.
 - If the idea is ambiguous, pick the most reasonable reading, say which one you picked, and
   list the alternatives under open questions. Do not silently invent requirements.
 

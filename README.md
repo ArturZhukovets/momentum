@@ -53,8 +53,7 @@ uv run python -m momentum
 
 The DB is created at `data/momentum.db` on first start and Alembic runs
 `upgrade head` on every boot, so a new checkout and an existing database both
-just work. A database created before Alembic existed is auto-stamped at the
-baseline revision instead of being re-created.
+just work.
 
 Schema changes go through Alembic — edit `src/momentum/db/tables.py`, then:
 

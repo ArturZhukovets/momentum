@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import sqlite3
 from pathlib import Path
 
 from alembic.config import Config
@@ -32,27 +31,7 @@ def _config() -> Config:
     return Config(ALEMBIC_INI)
 
 
-def _is_pre_alembic(db_file: Path) -> bool:
-    """True for a database with real tables but no Alembic version marker."""
-    if not db_file.is_file():
-        return False
-    with sqlite3.connect(db_file) as conn:
-        names = {
-            row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")
-        }
-    return "users" in names and "alembic_version" not in names
-
-
-def _migrate_sync(db_file: Path) -> None:
-    if _is_pre_alembic(db_file):
-        # Stamping such a database would work, but it would keep DDL Alembic
-        # cannot fully reflect (see alembic/env.py) and a later batch migration
-        # would silently drop its ON DELETE CASCADEs. Rebuilding is the only
-        # safe path, and it is a deliberate operator action — refuse loudly.
-        raise RuntimeError(
-            f"{db_file} has tables but no alembic_version: it predates Alembic. "
-            "Rebuild it before starting the bot — see docs/db-rebuild.md."
-        )
+def _migrate_sync() -> None:
     command.upgrade(_config(), "head")  # alembic/env.py takes the URL from settings.
 
 
@@ -60,5 +39,5 @@ async def upgrade_to_head() -> None:
     db_file: Path = settings.db_file
     db_file.parent.mkdir(parents=True, exist_ok=True)
 
-    await asyncio.to_thread(_migrate_sync, db_file)
+    await asyncio.to_thread(_migrate_sync)
     log.info("Schema is at head")
