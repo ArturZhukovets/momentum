@@ -3,7 +3,7 @@
   "tasks": [
     {
       "id": 1,
-      "status": "done",
+      "status": "accepted",
       "title": "Add cardio types (running, swimming, elliptical, walking)",
       "spec": "docs/tasks/001-dobavit-vidy-kardio-tipa-beg-plavanie-ellipsoid.md",
       "source": {
@@ -18,7 +18,7 @@
     },
     {
       "id": 2,
-      "status": "done",
+      "status": "accepted",
       "title": "Improve measurement-flow copy: frequency note, imperative prompts, \"parameters\" label",
       "spec": "docs/tasks/002-v-soobschenii-gde-gayd-po-zameram-dobavit-esche.md",
       "source": {
@@ -43,6 +43,36 @@
       },
       "synced_at": "2026-08-05T19:03:40Z",
       "drafted_at": "2026-08-06T10:56:48Z",
+      "attempts": 0,
+      "last_error": null
+    },
+    {
+      "id": 5,
+      "status": "drafted",
+      "title": "Показывать конкретный тип тренировки в строке истории",
+      "spec": "docs/tasks/005-kogda-nazhimaem-knopku-istoriya-pisat-dlya-kazhd.md",
+      "source": {
+        "user_full_name": "Maria",
+        "created_at": "2026-08-12T16:56:22+00:00",
+        "request_text": "Когда нажимаем кнопку история, писать для каждого айтема тип тренировки"
+      },
+      "synced_at": "2026-08-12T18:08:35Z",
+      "drafted_at": "2026-08-12T18:09:49Z",
+      "attempts": 0,
+      "last_error": null
+    },
+    {
+      "id": 6,
+      "status": "rejected",
+      "title": "Проверить и при необходимости обновить текст /help",
+      "spec": "docs/tasks/006-dlya-komandy-help-obnovit-tekst-dlya-polzovately.md",
+      "source": {
+        "user_full_name": "Artur",
+        "created_at": "2026-08-12T17:02:13+00:00",
+        "request_text": "Для команды /help обновить текст для пользователя. Сейчас там устаревшая инфа про версию где было кардио."
+      },
+      "synced_at": "2026-08-12T18:08:35Z",
+      "drafted_at": "2026-08-12T18:10:41Z",
       "attempts": 0,
       "last_error": null
     }
