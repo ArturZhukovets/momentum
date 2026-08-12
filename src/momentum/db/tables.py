@@ -81,7 +81,7 @@ class ImprovementRequest(Base):
     __tablename__ = "improvement_requests"
     __table_args__ = (
         CheckConstraint("length(trim(request_text)) > 0"),
-        CheckConstraint("status IN ('new','done','rejected')"),
+        CheckConstraint("status IN ('new','approved','done','rejected')"),
         Index("ix_improvement_requests_status_created", "status", "created_at"),
         {"sqlite_autoincrement": True},
     )

@@ -78,7 +78,7 @@ class AdminMenuCB(CallbackData, prefix="adm_menu"):
 
 class AdminSuggestionCB(CallbackData, prefix="adm_sug"):
     action: str  # list | open | set
-    status: str  # active list filter: new | done | rejected | all
+    status: str  # active list filter: new | approved | done | rejected | all
     target: str = ""  # new status, `set` only
     request_id: int = 0
     page: int = 1

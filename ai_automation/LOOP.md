@@ -14,7 +14,7 @@ specs. Run instructions: [README.md](README.md).
 | ------------------ | ----------------------------------------------------------------------------- |
 | **Trigger**        | `python -m ai_automation.suggestions_loop run`, by hand (later: cron)         |
 | **External state** | `todo.json` — a machine-owned ledger. State lives in files, never in a session |
-| **Work unit**      | one suggestion → one `docs/tasks/NNN-slug.md` spec                            |
+| **Work unit**      | one **approved** suggestion → one `docs/tasks/NNN-slug.md` spec               |
 | **Worker**         | a headless `claude -p --agent task-spec-writer` process, one per suggestion   |
 | **Verifier**       | you — every drafted spec is reviewed by hand, accepted or rejected            |
 | **Stop condition** | no tasks in `todo.json` with status `pending`                                 |
@@ -48,7 +48,7 @@ Failure modes this guards against:
 
 ```mermaid
 graph TD
-    API[("remote API")] -->|fetch, deterministic| FETCH["SuggestionsAPI.fetch_all()"]
+    API[("remote API")] -->|"fetch status=approved,<br/>deterministic"| FETCH["SuggestionsAPI.fetch_all(status)"]
     FETCH --> SYNC["SuggestionsLoop.sync()<br/>upsert entries, idempotent"]
     SYNC --> CACHE[/".loop/suggestions.json<br/>raw cache, gitignored"/]
     SYNC --> LEDGER[/"todo.json<br/>the ledger, committed"/]
@@ -79,7 +79,28 @@ graph TD
 **Idempotency key** is the remote suggestion `id`. Re-running the loop never duplicates
 an entry and never re-drafts an already-drafted spec.
 
-### Status flow
+### Remote status flow — the bot's DB
+
+A suggestion the user just sent is `new` and invisible to the loop. It enters only
+once you flip it to `approved` in the bot's `/admin` panel — that flip is
+the human decision about *whether the idea is worth building*, upstream of and separate
+from the review of the spec the agent then writes. `sync()` asks the API for
+`status=approved` and `TodoLedger.upsert` re-checks the same value, so a broadened API
+response still can't smuggle an unapproved idea in.
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> new: user sends<br/>a suggestion
+    new --> approved: you, in /admin
+    new --> rejected: you, in /admin
+    approved --> done: the task<br/>got built
+    approved --> rejected: you, in /admin
+```
+
+Only `approved` is picked up by `sync()`.
+
+### Ledger status flow — `todo.json`
 
 ```mermaid
 stateDiagram-v2
@@ -131,7 +152,7 @@ diffs and hand-editing.
 | Field        | Owner                                | Meaning                                                                   |
 | ------------ | ------------------------------------ | ------------------------------------------------------------------------- |
 | `id`         | `sync`                               | remote suggestion id — the idempotency key, never changes                 |
-| `status`     | `sync` (initial), `mark_*`, **you**  | see status flow above                                                     |
+| `status`     | `sync` (initial), `mark_*`, **you**  | see the ledger status flow above                                                     |
 | `title`      | `sync` (provisional), `mark_drafted` | Russian truncation at first, replaced by the spec's own English `# Title` |
 | `spec`       | `sync`                               | repo-relative target path, derived from id + transliterated slug          |
 | `source`     | `sync`                               | the original record, so specs stay auditable without hitting the API      |
@@ -194,8 +215,8 @@ state from inside a session, so you can watch and course-correct.
 3. **Duplicate clustering.** Several users reporting the same thing currently produce
    several entries; handle by hand (`rejected`) until volume justifies an agent, since
    clustering breaks the clean id-based idempotency.
-4. **Closing the remote loop.** `PATCH` the suggestion's status to `done` when its task
-   is accepted — needs a write endpoint.
+4. **Closing the remote loop.** `PATCH` the suggestion `approved` → `done` when its task
+   is built — needs a write endpoint. Today that flip is manual, in `/admin`.
 5. **An implementation loop.** A second loop that reads `accepted` specs and writes code
    on a worktree branch. Needs real verification (ruff + a test suite) before it's safe.
 6. **Human-in-the-loop instead of `max_tasks`.** Prompt before every next task rather

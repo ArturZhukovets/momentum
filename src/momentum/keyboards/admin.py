@@ -22,7 +22,13 @@ from momentum.texts import admin as texts_admin
 from momentum.texts import common as texts_common
 from momentum.texts import history as texts_history
 
-SUGGESTION_FILTERS: tuple[str, ...] = ("new", "done", "rejected", texts_admin.SUGGESTION_FILTER_ALL)
+SUGGESTION_FILTERS: tuple[str, ...] = (
+    "new",
+    "approved",
+    "done",
+    "rejected",
+    texts_admin.SUGGESTION_FILTER_ALL,
+)
 
 
 def _add_pager(
@@ -108,8 +114,8 @@ def admin_suggestions_kb(
         )
         for value in SUGGESTION_FILTERS
     ]
-    builder.row(*filters[:2])
-    builder.row(*filters[2:])
+    builder.row(*filters[:3])
+    builder.row(*filters[3:])
     builder.row(_to_admin_menu_button())
     return builder.as_markup()
 

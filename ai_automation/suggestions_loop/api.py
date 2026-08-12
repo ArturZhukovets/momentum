@@ -17,7 +17,7 @@ class SuggestionItem(BaseModel):
     user_id: int
     user_full_name: str
     request_text: str
-    status: Literal["new", "done", "rejected"]
+    status: Literal["new", "approved", "done", "rejected"]
     created_at: datetime
 
 
@@ -37,15 +37,18 @@ class SuggestionsAPI:
             raise SystemExit("INTERNAL_API_KEY is not set")
         return {"X-API-Key": api_key}
 
-    async def fetch_all(self) -> list[SuggestionItem]:
-        """Every suggestion, newest first."""
+    async def fetch_all(self, status: str | None = None) -> list[SuggestionItem]:
+        """Every suggestion, newest first. `status` filters server-side; `None` fetches
+        every status."""
         headers = self._headers()
         suggestions: list[SuggestionItem] = []
         offset = 0
 
         async with aiohttp.ClientSession() as session:
             while True:
-                params = {"limit": self.page_size, "offset": offset}
+                params: dict[str, str | int] = {"limit": self.page_size, "offset": offset}
+                if status is not None:
+                    params["status"] = status
                 async with session.get(self.url, headers=headers, params=params) as response:
                     if response.status >= 400:
                         body = await response.text()

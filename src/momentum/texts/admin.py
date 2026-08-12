@@ -25,6 +25,7 @@ SUGGESTION_FILTER_ALL = "all"
 
 SUGGESTION_FILTER_LABELS: dict[str, str] = {
     "new": "🆕 Новые",
+    "approved": "👍 Одобренные",
     "done": "✅ Сделанные",
     "rejected": "🚫 Отклонённые",
     SUGGESTION_FILTER_ALL: "📋 Все",
@@ -32,12 +33,14 @@ SUGGESTION_FILTER_LABELS: dict[str, str] = {
 
 SUGGESTION_STATUS_LABELS: dict[str, str] = {
     "new": "🆕 новое",
+    "approved": "👍 одобрено",
     "done": "✅ сделано",
     "rejected": "🚫 отклонено",
 }
 
 SUGGESTION_ACTION_LABELS: dict[str, str] = {
     "new": "🆕 В новые",
+    "approved": "👍 Одобрить",
     "done": "✅ Сделано",
     "rejected": "🚫 Отклонить",
 }

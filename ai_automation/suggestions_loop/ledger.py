@@ -144,13 +144,14 @@ class TodoLedger:
 
     def upsert(self, suggestions: list[SuggestionItem]) -> int:
         """Append one entry per suggestion that isn't in the ledger yet. Returns the
-        number added. Suggestions already `done`/`rejected` upstream never enter."""
+        number added. Only suggestions the admin approved upstream enter; `new` ones are
+        still awaiting approval, `done`/`rejected` ones are settled."""
         tasks = self.load()
         known = {t.id for t in tasks}
         added = 0
 
         for suggestion in suggestions:
-            if suggestion.id in known or suggestion.status != "new":
+            if suggestion.id in known or suggestion.status != config.APPROVED_STATUS:
                 continue
             tasks.append(
                 Task(

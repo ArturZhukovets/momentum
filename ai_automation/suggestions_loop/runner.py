@@ -92,8 +92,9 @@ class SuggestionsLoop:
     # -- deterministic commands
 
     async def sync(self) -> None:
-        """Fetch → cache raw JSON → upsert ledger entries. Safe to re-run."""
-        suggestions = await self.api.fetch_all()
+        """Fetch → cache raw JSON → upsert ledger entries. Safe to re-run. Only
+        admin-approved suggestions are drafted, so only those are fetched."""
+        suggestions = await self.api.fetch_all(status=config.APPROVED_STATUS)
 
         self.cache.parent.mkdir(parents=True, exist_ok=True)
         self.cache.write_text(
@@ -165,9 +166,7 @@ class SuggestionsLoop:
             print(f"==> [{task_id}] drafting {task.spec}")
 
             ok, log = self.agent.draft(
-                task_id=task_id,
-                spec_path=task.spec,
-                text=self.ledger.request_text(task_id)
+                task_id=task_id, spec_path=task.spec, text=self.ledger.request_text(task_id)
             )
             if not ok:
                 self.mark_failed(task_id, f"agent run failed, see {log.relative_to(self.root)}")

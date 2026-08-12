@@ -140,8 +140,8 @@ between the two modes.
 ## Admin panel
 
 `/admin` opens an inline panel for triaging improvement suggestions (filter by
-`new` / `done` / `rejected` / all, then move a request between statuses) and for
-browsing registered users — their workout history, cardio photos, and weekly and
+`new` / `approved` / `done` / `rejected` / all, then move a request between
+statuses) and for browsing registered users — their workout history, cardio photos, and weekly and
 monthly reports.
 
 Access is decided **only** by the numeric Telegram ids in `ADMIN_USER_IDS`:

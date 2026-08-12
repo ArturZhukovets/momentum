@@ -8,7 +8,7 @@ from typing import Literal
 
 ISO_DATE = "%Y-%m-%d"
 
-ImprovementRequestStatus = Literal["new", "done", "rejected"]
+ImprovementRequestStatus = Literal["new", "approved", "done", "rejected"]
 Sex = Literal["male", "female"]
 GoalType = Literal["lose", "gain", "maintain", "muscle"]
 WorkoutType = Literal["running", "swimming", "elliptical", "gym", "home_workout"]

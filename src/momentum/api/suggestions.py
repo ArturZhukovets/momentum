@@ -27,7 +27,8 @@ def _serialize(request: ImprovementRequest) -> dict[str, Any]:
 async def list_suggestions(request: web.Request) -> web.Response:
     """List improvement requests, newest first.
 
-    Query params: ``status`` (optional: new|done|rejected), ``limit`` (1–200, default 50),
+    Query params: ``status`` (optional: new|approved|done|rejected; omitted = every status),
+    ``limit`` (1–200, default 50),
     ``offset`` (>= 0, default 0).
 
     Response JSON::
@@ -42,7 +43,7 @@ async def list_suggestions(request: web.Request) -> web.Response:
               "user_id": int,
               "user_full_name": str,
               "request_text": str,
-              "status": "new" | "done" | "rejected",
+              "status": "new" | "approved" | "done" | "rejected",
               "created_at": str   # ISO-8601 datetime
             },
             ...
