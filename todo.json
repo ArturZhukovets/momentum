@@ -3,7 +3,7 @@
   "tasks": [
     {
       "id": 1,
-      "status": "accepted",
+      "status": "done",
       "title": "Add cardio types (running, swimming, elliptical, walking)",
       "spec": "docs/tasks/001-dobavit-vidy-kardio-tipa-beg-plavanie-ellipsoid.md",
       "source": {
@@ -18,7 +18,7 @@
     },
     {
       "id": 2,
-      "status": "drafted",
+      "status": "done",
       "title": "Improve measurement-flow copy: frequency note, imperative prompts, \"parameters\" label",
       "spec": "docs/tasks/002-v-soobschenii-gde-gayd-po-zameram-dobavit-esche.md",
       "source": {

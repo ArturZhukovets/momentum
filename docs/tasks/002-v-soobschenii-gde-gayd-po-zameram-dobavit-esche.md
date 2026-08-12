@@ -61,9 +61,6 @@ Feasible: yes — pure string edits, no schema/handler-logic changes.
 4. No handler, keyboard, or schema changes required — `measure.py`, `formatters/profile.py`
    and `db/measurements.py` stay untouched since only the string constants change.
 
-## Data & schema changes
-None.
-
 ## User-facing copy
 `texts/profile.py` (`momentum.texts.profile`):
 - `MEASURE_GUIDE` — append a line recommending weekly, morning, fasted measurements.
@@ -71,38 +68,3 @@ None.
   "Укажи обхват ... в сантиметрах (например, N)" form.
 - `MEASURE_SAVED` — reword from "Замер сохранён" to "Ваши параметры" (as a heading before
   the measurement card).
-
-## Acceptance criteria
-- [ ] `/measure` → answer weight → tap "📐 Да, хочу замерить" → the guide message shown
-      before the first circumference question mentions measuring weekly, in the morning,
-      on an empty stomach, in addition to the existing "same spot every time" note.
-- [ ] Each circumference prompt (chest, waist, hips, thigh, arm) reads as an instruction
-      ("Укажи обхват ... в сантиметрах ...") rather than a bare noun phrase.
-- [ ] After confirming the review card, the final confirmation message starts with "✅ Ваши
-      параметры:" followed by the measurement card, instead of "✅ Замер сохранён.".
-- [ ] `/measure` when a same-day measurement already exists (`MEASURE_ALREADY_TODAY` path)
-      is unaffected — that message is untouched.
-
-## Additional suggestions
-- The suggestion's "УКАЖИТЕ" (formal, capitalised, plural "вы"-form imperative) clashes
-  with the bot's established informal "ты" register (`ASK_BIRTH_DATE` "родился?",
-  `ASK_MEASURE_WEIGHT` "Укажи свой текущий вес", `ONBOARDING_DONE` "погнали
-  тренироваться"). Recommend keeping "Укажи" for consistency rather than switching
-  register bot-wide; flagged as an open question below in case the user specifically wants
-  the formal tone everywhere.
-- Since `MEASURE_SAVED` becomes a heading ("Ваши параметры:") rather than a confirmation
-  sentence, consider whether the leading "✅" still reads correctly — kept it since it still
-  signals "successfully recorded", but a plain "📋 Ваши параметры:" is an alternative if the
-  checkmark feels out of place on a heading.
-
-## Risks & open questions
-- Whether "Укажи" (informal) or "Укажите" (formal) should be used — picked "Укажи" to match
-  the rest of the bot; flag to the user if they specifically intended the formal register
-  from their message.
-- Whether the frequency note belongs in `MEASURE_GUIDE` (shown once, before circumferences)
-  or should also be echoed near `ASK_MEASURE_WEIGHT` (weight is asked earlier and is a
-  measurement too) — scoped this plan to `MEASURE_GUIDE` only, as that is the message named
-  in the idea ("в сообщении, где гайд по замерам").
-
-## Effort
-S (< 1h) — pure string edits in one file (`texts/profile.py`), no logic/schema changes.
