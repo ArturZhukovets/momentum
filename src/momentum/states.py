@@ -6,14 +6,8 @@ from aiogram.fsm.state import State, StatesGroup
 
 
 class AddWorkout(StatesGroup):
-    choosing_kind = State()
-
-    cardio_photo = State()
-    cardio_description = State()
-
-    strength_parts = State()
-    strength_description = State()
-
+    choosing_type = State()
+    field_input = State()
     choosing_date = State()
     custom_date = State()
 

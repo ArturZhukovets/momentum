@@ -10,8 +10,9 @@ from collections import Counter
 from dataclasses import dataclass
 from datetime import date, timedelta
 
-from momentum.db.models import WorkoutPoint
+from momentum.db.models import WorkoutPoint, WorkoutType
 from momentum.services import periods
+from momentum.services.workout_types import WORKOUT_TYPES
 
 STREAK_LOOKBACK_WEEKS = 52
 
@@ -21,8 +22,7 @@ class WeeklyStats:
     week_start: date
     week_end: date
     total: int
-    cardio: int
-    strength: int
+    by_type: tuple[tuple[WorkoutType, int], ...]
     prev_total: int
     diff: int
     pct: int | None  # None when the previous week was zero
@@ -36,10 +36,7 @@ class MonthlyStats:
     month_start: date
     month_end: date
     total: int
-    cardio: int
-    strength: int
-    cardio_pct: int
-    strength_pct: int
+    by_type: tuple[tuple[WorkoutType, int], ...]
     weekly_avg: float
     body_parts: tuple[tuple[str, int], ...]
     prev_total: int
@@ -57,10 +54,10 @@ def _in_range(points: list[WorkoutPoint], start: date, end: date) -> list[Workou
     return [p for p in points if start <= p.performed_on <= end]
 
 
-def _split_kinds(points: list[WorkoutPoint]) -> tuple[int, int]:
-    """(cardio, strength)"""
-    counts = Counter(p.kind for p in points)
-    return counts.get("cardio", 0), counts.get("strength", 0)
+def _count_types(points: list[WorkoutPoint]) -> tuple[tuple[WorkoutType, int], ...]:
+    """Per-type counts > 0, in catalog order."""
+    counts = Counter(p.workout_type for p in points)
+    return tuple((t, counts[t]) for t in WORKOUT_TYPES if counts[t] > 0)
 
 
 def _weekly_totals(points: list[WorkoutPoint]) -> Counter[date]:
@@ -105,7 +102,6 @@ def build_weekly_stats(points: list[WorkoutPoint], ref: date, goal: int) -> Week
     prev_start, prev_end = periods.prev_week_bounds(ref)
 
     current = _in_range(points, start, end)
-    cardio, strength = _split_kinds(current)
     total = len(current)
     prev_total = len(_in_range(points, prev_start, prev_end))
 
@@ -116,8 +112,7 @@ def build_weekly_stats(points: list[WorkoutPoint], ref: date, goal: int) -> Week
         week_start=start,
         week_end=end,
         total=total,
-        cardio=cardio,
-        strength=strength,
+        by_type=_count_types(current),
         prev_total=prev_total,
         diff=total - prev_total,
         pct=_pct_change(total, prev_total),
@@ -148,7 +143,6 @@ def build_monthly_stats(
     prev_start, prev_end = periods.prev_month_bounds(ref)
 
     current = _in_range(points, start, end)
-    cardio, strength = _split_kinds(current)
     total = len(current)
     prev_total = len(_in_range(points, prev_start, prev_end))
 
@@ -159,10 +153,7 @@ def build_monthly_stats(
         month_start=start,
         month_end=end,
         total=total,
-        cardio=cardio,
-        strength=strength,
-        cardio_pct=round(cardio / total * 100) if total else 0,
-        strength_pct=round(strength / total * 100) if total else 0,
+        by_type=_count_types(current),
         weekly_avg=round(total / weeks, 1) if weeks else 0.0,
         body_parts=ranked,
         prev_total=prev_total,

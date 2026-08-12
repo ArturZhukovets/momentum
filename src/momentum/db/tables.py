@@ -51,7 +51,6 @@ class User(Base):
 class Workout(Base):
     __tablename__ = "workouts"
     __table_args__ = (
-        CheckConstraint("kind IN ('cardio','strength')"),
         Index("ix_workouts_user_date", "user_id", "performed_on"),
         {"sqlite_autoincrement": True},
     )
@@ -60,10 +59,12 @@ class Workout(Base):
     user_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False
     )
-    kind: Mapped[str] = mapped_column(Text, nullable=False)
+    workout_type: Mapped[str] = mapped_column(Text, nullable=False)
     performed_on: Mapped[date] = mapped_column(Date, nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("''"))
-    photo_file_id: Mapped[str | None] = mapped_column(Text)  # cardio only
+    duration_min: Mapped[int | None] = mapped_column(Integer)
+    distance_km: Mapped[float | None] = mapped_column(Float)
+    effort: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[str] = mapped_column(Text, nullable=False)
 
 

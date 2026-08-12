@@ -22,6 +22,10 @@ def _diff_line(diff: int, pct: int | None) -> str:
     return f"{texts_reports.LABEL_DIFF}: {_signed(diff)} ({suffix})"
 
 
+def _by_type_block(by_type: tuple[tuple[str, int], ...]) -> str:
+    return "\n".join(f"{texts_workout.type_label(t)}: {n}" for t, n in by_type)
+
+
 def weekly_report(stats: WeeklyStats) -> str:
     period = (
         f"{texts_common.fmt_date_short(stats.week_start)} – "
@@ -35,10 +39,7 @@ def weekly_report(stats: WeeklyStats) -> str:
     blocks = [
         head,
         f"{texts_reports.LABEL_TOTAL}: <b>{stats.total}</b>",
-        (
-            f"{texts_reports.LABEL_STRENGTH}: {stats.strength}\n"
-            f"{texts_reports.LABEL_CARDIO}: {stats.cardio}"
-        ),
+        _by_type_block(stats.by_type),
         (
             f"{texts_reports.LABEL_PREV_WEEK}: {stats.prev_total}\n"
             f"{_diff_line(stats.diff, stats.pct)}"
@@ -67,10 +68,7 @@ def monthly_report(stats: MonthlyStats) -> str:
             f"{texts_reports.LABEL_TOTAL}: <b>{stats.total}</b>\n"
             f"{texts_reports.LABEL_WEEKLY_AVG}: {stats.weekly_avg}"
         ),
-        (
-            f"{texts_reports.LABEL_STRENGTH}: {stats.strength} ({stats.strength_pct}%)\n"
-            f"{texts_reports.LABEL_CARDIO}: {stats.cardio} ({stats.cardio_pct}%)"
-        ),
+        _by_type_block(stats.by_type),
     ]
 
     if stats.body_parts:
