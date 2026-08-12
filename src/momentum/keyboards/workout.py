@@ -1,4 +1,4 @@
-"""The add-workout flow: kind, skip/cancel, body parts, date."""
+"""The add-workout flow: type, skippable fields, body parts, date."""
 
 from __future__ import annotations
 
@@ -7,39 +7,55 @@ from collections.abc import Sequence
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from momentum.keyboards.callbacks import ActionCB, DateCB, KindCB, PartCB
+from momentum.keyboards.callbacks import ActionCB, ChoiceCB, DateCB, PartCB, SkipCB, TypeCB
 from momentum.keyboards.common import CANCEL_BUTTON
+from momentum.services.workout_types import WORKOUT_TYPES, FieldSpec
 from momentum.texts import common as texts_common
 from momentum.texts import workout as texts_workout
 
 
-def kind_kb() -> InlineKeyboardMarkup:
+def type_kb() -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    for workout_type in WORKOUT_TYPES:
+        builder.button(
+            text=texts_workout.type_label(workout_type),
+            callback_data=TypeCB(value=workout_type),
+        )
+    builder.adjust(2)
+    builder.row(CANCEL_BUTTON)
+    return builder.as_markup()
+
+
+def skip_cancel_kb(step: str) -> InlineKeyboardMarkup:
+    """Skip guarded by ``SkipCB.step`` so a leftover keyboard can't skip the wrong field."""
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text=texts_workout.BTN_CARDIO, callback_data=KindCB(value="cardio").pack()
-                ),
-                InlineKeyboardButton(
-                    text=texts_workout.BTN_STRENGTH, callback_data=KindCB(value="strength").pack()
-                ),
-            ],
-            [CANCEL_BUTTON],
-        ]
-    )
-
-
-def skip_cancel_kb() -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text=texts_common.BTN_SKIP, callback_data=ActionCB(name="skip").pack()
+                    text=texts_common.BTN_SKIP, callback_data=SkipCB(step=step).pack()
                 )
             ],
             [CANCEL_BUTTON],
         ]
     )
+
+
+def choice_kb(field: FieldSpec) -> InlineKeyboardMarkup:
+    """Single-choice field (e.g. effort) plus skip/cancel."""
+    builder = InlineKeyboardBuilder()
+    for value in field.choices:
+        builder.button(
+            text=texts_workout.choice_label(field.name, value),
+            callback_data=ChoiceCB(field=field.name, value=value),
+        )
+    builder.adjust(1)
+    builder.row(
+        InlineKeyboardButton(
+            text=texts_common.BTN_SKIP, callback_data=SkipCB(step=field.name).pack()
+        )
+    )
+    builder.row(CANCEL_BUTTON)
+    return builder.as_markup()
 
 
 def parts_kb(selected: Sequence[str]) -> InlineKeyboardMarkup:
@@ -66,8 +82,11 @@ def parts_kb(selected: Sequence[str]) -> InlineKeyboardMarkup:
         InlineKeyboardButton(
             text=texts_workout.BTN_DONE, callback_data=ActionCB(name="parts_done").pack()
         ),
-        CANCEL_BUTTON,
+        InlineKeyboardButton(
+            text=texts_common.BTN_SKIP, callback_data=SkipCB(step="body_parts").pack()
+        ),
     )
+    builder.row(CANCEL_BUTTON)
     return builder.as_markup()
 
 

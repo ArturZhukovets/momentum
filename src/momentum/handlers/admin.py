@@ -330,16 +330,6 @@ async def show_workout(callback: CallbackQuery, callback_data: AdminWorkoutCB) -
     markup = kb_admin.admin_workout_detail_kb(
         user.user_id, callback_data.page, callback_data.users_page
     )
-
-    if workout.photo_file_id:
-        try:
-            await callback.message.delete()
-        except Exception:
-            log.debug("Could not delete list message", exc_info=True)
-        await callback.message.answer_photo(
-            workout.photo_file_id, caption=card, reply_markup=markup
-        )
-    else:
-        await _replace(callback, card, markup)
+    await _replace(callback, card, markup)
 
     await _answer(callback)

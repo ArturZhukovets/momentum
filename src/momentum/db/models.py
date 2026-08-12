@@ -11,16 +11,19 @@ ISO_DATE = "%Y-%m-%d"
 ImprovementRequestStatus = Literal["new", "done", "rejected"]
 Sex = Literal["male", "female"]
 GoalType = Literal["lose", "gain", "maintain", "muscle"]
+WorkoutType = Literal["running", "swimming", "elliptical", "gym", "home_workout"]
 
 
 @dataclass(frozen=True)
 class Workout:
     id: int
     user_id: int
-    kind: str
+    workout_type: WorkoutType
     performed_on: date
     description: str
-    photo_file_id: str | None
+    duration_min: int | None = None
+    distance_km: float | None = None
+    effort: str | None = None
     body_parts: tuple[str, ...] = ()
 
 
@@ -29,7 +32,7 @@ class WorkoutPoint:
     """Minimal row used by the pure stats builders."""
 
     performed_on: date
-    kind: str
+    workout_type: WorkoutType
 
 
 @dataclass(frozen=True)

@@ -72,17 +72,7 @@ async def _show_detail(callback: CallbackQuery, workout_id: int, page: int) -> N
 
     card = fmt_workout.workout_card(workout)
     markup = kb_history.workout_detail_kb(workout.id, page)
-
-    if workout.photo_file_id:
-        try:
-            await callback.message.delete()
-        except Exception:
-            log.debug("Could not delete list message", exc_info=True)
-        await callback.message.answer_photo(
-            workout.photo_file_id, caption=card, reply_markup=markup
-        )
-    else:
-        await _replace(callback, card, markup)
+    await _replace(callback, card, markup)
 
 
 async def _send_detail(message: Message, user_id: int, workout_id: int, page: int) -> None:
@@ -94,11 +84,7 @@ async def _send_detail(message: Message, user_id: int, workout_id: int, page: in
 
     card = fmt_workout.workout_card(workout)
     markup = kb_history.workout_detail_kb(workout.id, page)
-
-    if workout.photo_file_id:
-        await message.answer_photo(workout.photo_file_id, caption=card, reply_markup=markup)
-    else:
-        await message.answer(card, reply_markup=markup)
+    await message.answer(card, reply_markup=markup)
 
 
 # --------------------------------------------------------------------------

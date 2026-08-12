@@ -12,16 +12,18 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from momentum.db import tables
 from momentum.db.engine import new_session
-from momentum.db.models import Workout, WorkoutPoint, now_iso
+from momentum.db.models import Workout, WorkoutPoint, WorkoutType, now_iso
 
 
 async def add_workout(
     *,
     user_id: int,
-    kind: str,
+    workout_type: WorkoutType,
     performed_on: date,
     description: str = "",
-    photo_file_id: str | None = None,
+    duration_min: int | None = None,
+    distance_km: float | None = None,
+    effort: str | None = None,
     body_parts: list[str] | None = None,
 ) -> int:
     """Insert a workout and its body parts in one transaction."""
@@ -29,10 +31,12 @@ async def add_workout(
         result = await s.execute(
             insert(tables.Workout).values(
                 user_id=user_id,
-                kind=kind,
+                workout_type=workout_type,
                 performed_on=performed_on,
                 description=description,
-                photo_file_id=photo_file_id,
+                duration_min=duration_min,
+                distance_km=distance_km,
+                effort=effort,
                 created_at=now_iso(),
             )
         )
@@ -83,10 +87,12 @@ def _workout_from_row(row: Any, body_parts: tuple[str, ...] = ()) -> Workout:
     return Workout(
         id=row.id,
         user_id=row.user_id,
-        kind=row.kind,
+        workout_type=row.workout_type,
         performed_on=row.performed_on,
         description=row.description or "",
-        photo_file_id=row.photo_file_id,
+        duration_min=row.duration_min,
+        distance_km=row.distance_km,
+        effort=row.effort,
         body_parts=body_parts,
     )
 
@@ -165,17 +171,17 @@ async def list_workouts(user_id: int, limit: int, offset: int) -> list[Workout]:
 
 
 async def points_between(user_id: int, start: date, end: date) -> list[WorkoutPoint]:
-    """Dates + kinds in ``[start, end]`` — the input to the stats builders."""
+    """Dates + types in ``[start, end]`` — the input to the stats builders."""
     async with new_session() as s:
         rows = (
             await s.execute(
-                select(tables.Workout.performed_on, tables.Workout.kind).where(
+                select(tables.Workout.performed_on, tables.Workout.workout_type).where(
                     tables.Workout.user_id == user_id,
                     tables.Workout.performed_on.between(start, end),
                 )
             )
         ).all()
-    return [WorkoutPoint(r.performed_on, r.kind) for r in rows]
+    return [WorkoutPoint(r.performed_on, r.workout_type) for r in rows]
 
 
 async def body_part_counts(user_id: int, start: date, end: date) -> dict[str, int]:

@@ -13,8 +13,13 @@ class ActionCB(CallbackData, prefix="act"):
     name: str
 
 
-class KindCB(CallbackData, prefix="kind"):
-    value: str  # cardio | strength
+class TypeCB(CallbackData, prefix="type"):
+    value: str  # running | swimming | elliptical | gym | home_workout
+
+
+class ChoiceCB(CallbackData, prefix="choice"):
+    field: str  # FieldSpec.name the choice belongs to
+    value: str
 
 
 class PartCB(CallbackData, prefix="part"):
