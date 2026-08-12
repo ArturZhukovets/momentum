@@ -48,7 +48,7 @@
     },
     {
       "id": 5,
-      "status": "drafted",
+      "status": "accepted",
       "title": "Показывать конкретный тип тренировки в строке истории",
       "spec": "docs/tasks/005-kogda-nazhimaem-knopku-istoriya-pisat-dlya-kazhd.md",
       "source": {

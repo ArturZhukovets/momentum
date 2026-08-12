@@ -26,8 +26,10 @@ def workout_card(workout: Workout) -> str:
 
 def history_row_label(workout: Workout) -> str:
     """Short one-line label for a history list button."""
-    icon = "💪" if workout.workout_type in ("gym", "home_workout") else "🏃"
-    parts = [f"{texts_common.fmt_date(workout.performed_on)} {icon}"]
+    parts = [
+        f"{texts_common.fmt_date(workout.performed_on)} — "
+        f"{texts_workout.type_label(workout.workout_type)}"
+    ]
 
     if workout.body_parts:
         # Strip the emoji prefix — the row is already narrow.
