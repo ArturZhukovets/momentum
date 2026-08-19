@@ -10,10 +10,18 @@ from aiogram import Bot
 from aiogram.exceptions import TelegramForbiddenError, TelegramRetryAfter
 
 from momentum.config import settings
+from momentum.db import goals as db_goals
+from momentum.db import measurements as db_measurements
 from momentum.db import users as db_users
 from momentum.db import workouts as db_workouts
 from momentum.formatters import reports as fmt_reports
 from momentum.services import periods, stats
+from momentum.services.measurements import (
+    ReportBody,
+    build_period_change,
+    kg_left,
+    period_tone,
+)
 
 log = logging.getLogger(__name__)
 
@@ -21,19 +29,45 @@ SEND_DELAY = 0.05
 
 
 async def build_weekly_text(user_id: int, ref: date) -> str:
-    """Weekly report for the week containing `ref`."""
-    start, end = stats.weekly_range(ref)
-    points = await db_workouts.points_between(user_id, start, end)
-    return fmt_reports.weekly_report(stats.build_weekly_stats(points, ref, settings.WEEKLY_GOAL))
+    """Weekly report for the week containing `ref` — workouts plus goal/measurements."""
+    # Wider than the calendar week: streak walks back up to 52 weeks, so we load
+    # that history in one query. The formatter still shows only this Mon–Sun.
+    stats_start, stats_end = stats.weekly_range(ref)
+    workouts_for_stats = await db_workouts.list_workouts_for_stats(user_id, stats_start, stats_end)
+    workout_stats = stats.build_weekly_stats(workouts_for_stats, ref, settings.WEEKLY_GOAL)
+    period_start, period_end = periods.week_bounds(ref)
+    body = await _report_body(user_id, period_start, period_end)
+    return fmt_reports.weekly_report(workout_stats, body)
 
 
 async def build_monthly_text(user_id: int, ref: date) -> str:
-    """Monthly report for the month containing `ref`."""
-    start, end = stats.monthly_range(ref)
-    points = await db_workouts.points_between(user_id, start, end)
+    """Monthly report for the month containing `ref` — workouts plus goal/measurements."""
+    # This month + previous month, so the "vs last month" line needs no extra query.
+    stats_start, stats_end = stats.monthly_range(ref)
+    workouts_for_stats = await db_workouts.list_workouts_for_stats(user_id, stats_start, stats_end)
     month_start, month_end = periods.month_bounds(ref)
     body_parts = await db_workouts.body_part_counts(user_id, month_start, month_end)
-    return fmt_reports.monthly_report(stats.build_monthly_stats(points, body_parts, ref))
+    workout_stats = stats.build_monthly_stats(workouts_for_stats, body_parts, ref)
+    body = await _report_body(user_id, month_start, month_end)
+    return fmt_reports.monthly_report(workout_stats, body)
+
+
+async def _report_body(user_id: int, start: date, end: date) -> ReportBody:
+    """Active goal and in-period measurement change (pre-period rows as baseline).
+
+    Loads every measurement up to ``end`` with no ``start`` bound, so deltas can
+    use the last value before the period. Whether anything was recorded inside
+    the window is decided by ``build_period_change``.
+    """
+    goal = await db_goals.get_active_goal(user_id)
+    rows = await db_measurements.list_measurements(user_id, end=end)
+    change = build_period_change(rows, start, end)
+    return ReportBody(
+        change=change,
+        goal=goal,
+        tone=period_tone(change, goal),
+        kg_left=kg_left(change, goal),
+    )
 
 
 async def broadcast(bot: Bot, kind: str, ref: date) -> None:

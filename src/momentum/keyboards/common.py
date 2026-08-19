@@ -21,7 +21,10 @@ def main_menu() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text=texts_common.BTN_ADD)],
-            [KeyboardButton(text=texts_common.BTN_HISTORY)],
+            [
+                KeyboardButton(text=texts_common.BTN_HISTORY),
+                KeyboardButton(text=texts_common.BTN_SHOW_MEASURES),
+            ],
             [
                 KeyboardButton(text=texts_common.BTN_WEEK),
                 KeyboardButton(text=texts_common.BTN_MONTH),

@@ -293,7 +293,7 @@ async def _finish(
 
     workout = await db_workouts.get_workout(user_id, workout_id)
     week_start, week_end = periods.week_bounds(performed_on)
-    done = len(await db_workouts.points_between(user_id, week_start, week_end))
+    done = len(await db_workouts.list_workouts_for_stats(user_id, week_start, week_end))
 
     card = f"{texts_workout.WORKOUT_SAVED}\n\n{fmt_workout.workout_card(workout)}"
     nudge = texts_workout.weekly_nudge(done, settings.WEEKLY_GOAL)

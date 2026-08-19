@@ -48,7 +48,7 @@ identical handler code**; only `app.py`'s transport differs, selected by `BOT_MO
 - **Two parallel model layers, deliberately.** `db/tables.py` holds the declarative ORM
  models (`Base`, `User`, `Workout`, …) — the schema Alembic autogenerates from, and the
  only thing queries are built against. `db/models.py` keeps the frozen dataclasses
- (`Workout`, `WorkoutPoint`, `UserRow`, `UserBrief`, `ImprovementRequest`, `UserProfile`,
+ (`Workout`, `WorkoutStatRow`, `UserRow`, `UserBrief`, `ImprovementRequest`, `UserProfile`,
  `UserGoal`, `BodyMeasurement`) — what `db/` *returns*. Each module has a `_from_row`
  mapper across the boundary. Everything above `db/` sees only plain frozen dataclasses,
  so `services/` stays pure and no detached-instance or lazy-load surprise can reach a

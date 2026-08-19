@@ -1,4 +1,4 @@
-"""/measure — weight first, circumferences on request, one row at the end."""
+"""/measure writes a row; /show_measures is the read-only snapshot."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from aiogram.types import CallbackQuery, Message
 
 from momentum.config import settings
 from momentum.db import measurements as db_measurements
+from momentum.formatters import measurements as fmt_measurements
 from momentum.formatters import profile as fmt_profile
 from momentum.handlers._profile_common import (
     GIRTH_CM_RANGE,
@@ -20,6 +21,7 @@ from momentum.handlers._prompts import edit_prompt, send_prompt
 from momentum.keyboards import profile as kb_profile
 from momentum.keyboards.callbacks import MeasureFieldCB, ProfileCB
 from momentum.services import periods
+from momentum.services.measurements import build_snapshot
 from momentum.states import Measure
 from momentum.texts import common as texts_common
 from momentum.texts import profile as texts_profile
@@ -58,6 +60,16 @@ async def cmd_measure(message: Message, state: FSMContext, bot: Bot) -> None:
 
     await state.set_state(Measure.weight)
     await send_prompt(bot, message.chat.id, state, texts_profile.ASK_MEASURE_WEIGHT)
+
+
+@router.message(Command("show_measures"))
+@router.message(F.text == texts_common.BTN_SHOW_MEASURES)
+async def cmd_show_measures(message: Message, state: FSMContext) -> None:
+    await state.clear()
+    user_id = message.from_user.id
+    # Snapshot needs every row: a recent weight-only entry must not hide older girths.
+    rows = await db_measurements.list_measurements(user_id)
+    await message.answer(fmt_measurements.measures_screen(build_snapshot(rows), rows))
 
 
 @router.message(Measure.weight, F.text)

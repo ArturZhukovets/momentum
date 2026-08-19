@@ -28,8 +28,8 @@ class Workout:
 
 
 @dataclass(frozen=True)
-class WorkoutPoint:
-    """Minimal row used by the pure stats builders."""
+class WorkoutStatRow:
+    """Date + type only — enough to count workouts for weekly/monthly stats."""
 
     performed_on: date
     workout_type: WorkoutType

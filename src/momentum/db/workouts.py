@@ -12,7 +12,7 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from momentum.db import tables
 from momentum.db.engine import new_session
-from momentum.db.models import Workout, WorkoutPoint, WorkoutType, now_iso
+from momentum.db.models import Workout, WorkoutStatRow, WorkoutType, now_iso
 
 
 async def add_workout(
@@ -170,8 +170,8 @@ async def list_workouts(user_id: int, limit: int, offset: int) -> list[Workout]:
     return [_workout_from_row(r, tuple(parts_by_id.get(r.id, ()))) for r in rows]
 
 
-async def points_between(user_id: int, start: date, end: date) -> list[WorkoutPoint]:
-    """Dates + types in ``[start, end]`` — the input to the stats builders."""
+async def list_workouts_for_stats(user_id: int, start: date, end: date) -> list[WorkoutStatRow]:
+    """Date + type in ``[start, end]`` — the slim projection stats builders need."""
     async with new_session() as s:
         rows = (
             await s.execute(
@@ -181,7 +181,7 @@ async def points_between(user_id: int, start: date, end: date) -> list[WorkoutPo
                 )
             )
         ).all()
-    return [WorkoutPoint(r.performed_on, r.workout_type) for r in rows]
+    return [WorkoutStatRow(r.performed_on, r.workout_type) for r in rows]
 
 
 async def body_part_counts(user_id: int, start: date, end: date) -> dict[str, int]:

@@ -2,7 +2,7 @@
 
 All literal copy comes from the ``texts`` package — these modules only
 assemble it. Submodules are per-resource (``workout``, ``reports``,
-``suggestions``, ``users``) — import the one you need, e.g.
+``suggestions``, ``users``, ``measurements``) — import the one you need, e.g.
 ``from momentum.formatters import workout as fmt_workout``.
 """
 

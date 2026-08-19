@@ -8,7 +8,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any
 
-from sqlalchemy import insert, select
+from sqlalchemy import func, insert, select
 
 from momentum.db import tables
 from momentum.db.engine import new_session
@@ -92,20 +92,39 @@ async def latest_weight(user_id: int) -> float | None:
         )
 
 
-async def list_measurements(user_id: int, limit: int, offset: int) -> list[BodyMeasurement]:
-    """A page of measurements, newest first."""
+async def count_measurements(user_id: int) -> int:
     async with new_session() as s:
-        rows = (
-            (
-                await s.execute(
-                    select(tables.BodyMeasurement)
-                    .where(tables.BodyMeasurement.user_id == user_id)
-                    .order_by(*_ORDER_NEWEST)
-                    .limit(limit)
-                    .offset(offset)
-                )
-            )
-            .scalars()
-            .all()
+        count = await s.scalar(
+            select(func.count())
+            .select_from(tables.BodyMeasurement)
+            .where(tables.BodyMeasurement.user_id == user_id)
         )
+    return int(count or 0)
+
+
+async def list_measurements(
+    user_id: int,
+    *,
+    limit: int | None = None,
+    offset: int = 0,
+    start: date | None = None,
+    end: date | None = None,
+) -> list[BodyMeasurement]:
+    """Newest-first history; ``start``/``end`` bound ``recorded_on`` inclusively.
+
+    ``limit is None`` means no LIMIT. Date bounds are independent: pass only
+    ``end`` to also load pre-period rows as a baseline for deltas.
+    """
+    conditions = [tables.BodyMeasurement.user_id == user_id]
+    if start is not None:
+        conditions.append(tables.BodyMeasurement.recorded_on >= start)
+    if end is not None:
+        conditions.append(tables.BodyMeasurement.recorded_on <= end)
+
+    stmt = select(tables.BodyMeasurement).where(*conditions).order_by(*_ORDER_NEWEST).offset(offset)
+    if limit is not None:
+        stmt = stmt.limit(limit)
+
+    async with new_session() as s:
+        rows = (await s.execute(stmt)).scalars().all()
     return [_measurement_from_row(r) for r in rows]

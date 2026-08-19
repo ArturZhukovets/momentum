@@ -3,7 +3,7 @@ handlers. Code, identifiers, comments and DB values stay in English; only the
 string *contents* are Russian.
 
 Submodules are per-resource (``common``, ``workout``, ``history``, ``reports``,
-``suggestions``, ``admin``) — import the one you need, e.g.
+``suggestions``, ``admin``, ``measurements``) — import the one you need, e.g.
 ``from momentum.texts import workout as texts_workout``.
 """
 

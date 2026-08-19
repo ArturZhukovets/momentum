@@ -10,10 +10,11 @@ from collections import Counter
 from dataclasses import dataclass
 from datetime import date, timedelta
 
-from momentum.db.models import WorkoutPoint, WorkoutType
+from momentum.db.models import WorkoutStatRow, WorkoutType
 from momentum.services import periods
 from momentum.services.workout_types import WORKOUT_TYPES
 
+# `/week` streak walks backward week by week; this is the cap so one query covers it.
 STREAK_LOOKBACK_WEEKS = 52
 
 
@@ -50,18 +51,18 @@ def _pct_change(total: int, prev: int) -> int | None:
     return round((total - prev) / prev * 100)
 
 
-def _in_range(points: list[WorkoutPoint], start: date, end: date) -> list[WorkoutPoint]:
-    return [p for p in points if start <= p.performed_on <= end]
+def _in_range(workouts: list[WorkoutStatRow], start: date, end: date) -> list[WorkoutStatRow]:
+    return [w for w in workouts if start <= w.performed_on <= end]
 
 
-def _count_types(points: list[WorkoutPoint]) -> tuple[tuple[WorkoutType, int], ...]:
+def _count_types(workouts: list[WorkoutStatRow]) -> tuple[tuple[WorkoutType, int], ...]:
     """Per-type counts > 0, in catalog order."""
-    counts = Counter(p.workout_type for p in points)
+    counts = Counter(w.workout_type for w in workouts)
     return tuple((t, counts[t]) for t in WORKOUT_TYPES if counts[t] > 0)
 
 
-def _weekly_totals(points: list[WorkoutPoint]) -> Counter[date]:
-    return Counter(periods.week_start(p.performed_on) for p in points)
+def _weekly_totals(workouts: list[WorkoutStatRow]) -> Counter[date]:
+    return Counter(periods.week_start(w.performed_on) for w in workouts)
 
 
 def _streak(totals: Counter[date], current_week_start: date, goal: int) -> int:
@@ -88,25 +89,29 @@ def _streak(totals: Counter[date], current_week_start: date, goal: int) -> int:
 
 
 def weekly_range(ref: date) -> tuple[date, date]:
-    """Date range the weekly builder needs points for (streak lookback included)."""
+    """Fetch window for weekly stats: current week plus ``STREAK_LOOKBACK_WEEKS`` of history.
+
+    The report itself is only the week containing ``ref``. The extra lookback is
+    so ``_streak`` can walk consecutive goal-weeks without a second query.
+    """
     start, end = periods.week_bounds(ref)
     return periods.shift_weeks(start, -STREAK_LOOKBACK_WEEKS), end
 
 
-def build_weekly_stats(points: list[WorkoutPoint], ref: date, goal: int) -> WeeklyStats:
+def build_weekly_stats(workouts: list[WorkoutStatRow], ref: date, goal: int) -> WeeklyStats:
     """Stats for the week containing `ref`.
 
-    `points` must cover at least `weekly_range(ref)` for the streak to be right.
+    ``workouts`` must cover at least ``weekly_range(ref)`` or the streak is truncated.
     """
     start, end = periods.week_bounds(ref)
     prev_start, prev_end = periods.prev_week_bounds(ref)
 
-    current = _in_range(points, start, end)
+    current = _in_range(workouts, start, end)
     total = len(current)
-    prev_total = len(_in_range(points, prev_start, prev_end))
+    prev_total = len(_in_range(workouts, prev_start, prev_end))
 
     month_start, _ = periods.month_bounds(ref)
-    month_to_date = len(_in_range(points, month_start, ref))
+    month_to_date = len(_in_range(workouts, month_start, ref))
 
     return WeeklyStats(
         week_start=start,
@@ -117,20 +122,20 @@ def build_weekly_stats(points: list[WorkoutPoint], ref: date, goal: int) -> Week
         diff=total - prev_total,
         pct=_pct_change(total, prev_total),
         month_to_date=month_to_date,
-        streak=_streak(_weekly_totals(points), start, goal),
+        streak=_streak(_weekly_totals(workouts), start, goal),
         goal=goal,
     )
 
 
 def monthly_range(ref: date) -> tuple[date, date]:
-    """Date range the monthly builder needs points for (previous month included)."""
+    """Fetch window for monthly stats: this month plus the previous one (for the diff line)."""
     prev_start, _ = periods.prev_month_bounds(ref)
     _, end = periods.month_bounds(ref)
     return prev_start, end
 
 
 def build_monthly_stats(
-    points: list[WorkoutPoint],
+    workouts: list[WorkoutStatRow],
     body_parts: dict[str, int],
     ref: date,
     top_parts: int = 5,
@@ -142,9 +147,9 @@ def build_monthly_stats(
     start, end = periods.month_bounds(ref)
     prev_start, prev_end = periods.prev_month_bounds(ref)
 
-    current = _in_range(points, start, end)
+    current = _in_range(workouts, start, end)
     total = len(current)
-    prev_total = len(_in_range(points, prev_start, prev_end))
+    prev_total = len(_in_range(workouts, prev_start, prev_end))
 
     weeks = periods.weeks_touched(start, end)
     ranked = tuple(sorted(body_parts.items(), key=lambda kv: (-kv[1], kv[0]))[:top_parts])
