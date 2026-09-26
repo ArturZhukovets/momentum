@@ -14,7 +14,8 @@ from typing import TYPE_CHECKING, Literal
 from momentum.db.models import BodyMeasurement, GoalType, UserGoal
 
 if TYPE_CHECKING:
-    # `pace` builds on this module's noise constants, so a runtime import would cycle.
+    # `pace` and `energy` build on this module, so a runtime import would cycle.
+    from momentum.services.energy import EnergyStats, ProfileField
     from momentum.services.pace import PaceStats
 
 MeasurementField = Literal["weight_kg", "waist_cm", "chest_cm", "hips_cm", "thigh_cm", "arm_cm"]
@@ -117,13 +118,19 @@ class PeriodChange:
 
 @dataclass(frozen=True)
 class ReportBody:
-    """Goal + period change + tone + pace, ready for the weekly/monthly report formatter."""
+    """Goal + period change + tone + pace + energy, ready for the weekly/monthly report formatter.
+
+    ``profile_nudge`` lists the profile answers to ask for; empty unless this
+    report is the one that carries the one-time nudge.
+    """
 
     change: PeriodChange
     goal: UserGoal | None
     tone: PeriodTone
     kg_left: float | None
     pace: PaceStats | None
+    energy: EnergyStats | None
+    profile_nudge: tuple[ProfileField, ...]
 
 
 def build_period_change(rows: list[BodyMeasurement], start: date, end: date) -> PeriodChange:
@@ -186,6 +193,13 @@ def goal_direction(goal_type: GoalType) -> int:
     if goal_type in ("gain", "muscle"):
         return 1
     return 0
+
+
+def latest_weight_kg(rows: list[BodyMeasurement]) -> float | None:
+    """Newest non-null weight in ``rows`` (any order); circumference-only rows are skipped."""
+    newest_first = sorted(rows, key=lambda r: (r.recorded_on, r.id), reverse=True)
+    latest = _latest_non_null(newest_first, "weight_kg")
+    return latest[0] if latest is not None else None
 
 
 def kg_left(change: PeriodChange, goal: UserGoal | None) -> float | None:

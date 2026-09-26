@@ -29,10 +29,12 @@ class Workout:
 
 @dataclass(frozen=True)
 class WorkoutStatRow:
-    """Date + type only — enough to count workouts for weekly/monthly stats."""
+    """The slim report projection: date + type to count, duration + effort for the energy."""
 
     performed_on: date
     workout_type: WorkoutType
+    duration_min: int | None
+    effort: str | None
 
 
 @dataclass(frozen=True)

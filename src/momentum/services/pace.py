@@ -131,12 +131,18 @@ def _nothing_to_report(required: float | None, points: int) -> PaceStats:
     )
 
 
-def _required_kg_per_week(goal: UserGoal) -> float | None:
+def planned_kg_per_month(goal: UserGoal) -> float | None:
+    """The goal's pace, signed (minus = losing); ``0`` for maintain, ``None`` if skipped."""
     if goal.goal_type == "maintain":
         return 0.0
     if goal.target_rate_kg_per_month is None:
         return None
-    return goal_direction(goal.goal_type) * goal.target_rate_kg_per_month / WEEKS_PER_MONTH
+    return goal_direction(goal.goal_type) * goal.target_rate_kg_per_month
+
+
+def _required_kg_per_week(goal: UserGoal) -> float | None:
+    planned = planned_kg_per_month(goal)
+    return None if planned is None else planned / WEEKS_PER_MONTH
 
 
 def _trend(weighins: list[tuple[date, float]]) -> tuple[float, float]:

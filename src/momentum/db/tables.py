@@ -37,7 +37,12 @@ class Base(DeclarativeBase):
 
 
 class User(Base):
-    """Telegram identity only — written solely by ``common.UserMiddleware``."""
+    """Telegram identity plus bot-side state — nothing here is asked of the user.
+
+    Identity columns are written only by ``common.UserMiddleware``; ``reports_on``
+    (the subscription) and ``profile_nudge_at`` (when the one-time "fill in your
+    profile" line went out) are the bot's own state.
+    """
 
     __tablename__ = "users"
 
@@ -46,6 +51,7 @@ class User(Base):
     first_name: Mapped[str | None] = mapped_column(Text)
     reports_on: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("1"))
     created_at: Mapped[str] = mapped_column(Text, nullable=False)
+    profile_nudge_at: Mapped[str | None] = mapped_column(Text)
 
 
 class Workout(Base):

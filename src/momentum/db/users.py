@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.dialects.sqlite import insert
 
 from momentum.db import tables
@@ -40,6 +40,18 @@ async def get_reports_on(user_id: int) -> bool:
     async with new_session() as s:
         value = await s.scalar(select(tables.User.reports_on).where(tables.User.user_id == user_id))
     return True if value is None else bool(value)
+
+
+async def claim_profile_nudge(user_id: int) -> bool:
+    """Stamp the one-time profile nudge; ``True`` only for the call that stamped it."""
+    async with new_session() as s:
+        result = await s.execute(
+            update(tables.User)
+            .where(tables.User.user_id == user_id, tables.User.profile_nudge_at.is_(None))
+            .values(profile_nudge_at=now_iso())
+        )
+        await s.commit()
+    return result.rowcount > 0
 
 
 async def list_subscribers() -> list[UserRow]:

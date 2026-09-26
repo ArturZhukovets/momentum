@@ -266,7 +266,7 @@ async def show_user_report(callback: CallbackQuery, callback_data: AdminUserCB) 
     build = (
         reports.build_weekly_text if callback_data.action == "week" else reports.build_monthly_text
     )
-    body = await build(user.user_id, periods.today_in(settings.tz))
+    body = await build(user.user_id, periods.today_in(settings.tz), read_only=True)
 
     await _replace(
         callback,

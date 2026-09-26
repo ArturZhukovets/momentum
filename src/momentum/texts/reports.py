@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from momentum.texts.common import weeks_word
+from momentum.texts.common import plural, weeks_word, workouts_word
 
 ReportKind = Literal["week", "month"]
 
@@ -196,3 +196,69 @@ def pace_eta(line: str, eta: str) -> str:
 
 def no_measurements(kind: ReportKind) -> str:
     return _NO_MEASUREMENTS[kind]
+
+
+# Energy block — kcal figures arrive rounded and formatted, `rate` signed in kg per
+# month. «около»/«~» state a fact: MET and Mifflin both spread by a couple hundred kcal.
+
+_ENERGY_PERIOD: dict[ReportKind, str] = {"week": "За неделю", "month": "За месяц"}
+_COUNTED_WORKOUTS_PLURAL = (
+    "записанной тренировке",
+    "записанным тренировкам",
+    "записанным тренировкам",
+)
+_UNTIMED_WORKOUTS_PLURAL = (
+    "записанной тренировки",
+    "записанных тренировок",
+    "записанных тренировок",
+)
+
+# Accusative, in `energy.PROFILE_FIELDS` terms.
+_PROFILE_FIELD_NAMES: dict[str, str] = {
+    "birth_date": "дату рождения",
+    "sex": "пол",
+    "height_cm": "рост",
+}
+
+
+def energy_burn(daily_burn: str, from_workouts: str | None) -> str:
+    if from_workouts is None:
+        return f"🔥 Расход — около {daily_burn} ккал в день."
+    return f"🔥 Расход — около {daily_burn} ккал в день, из них ~{from_workouts} дают тренировки."
+
+
+def energy_target(rate: str, target: str) -> str:
+    return f"🍽 Для {rate} кг в месяц ориентир по питанию — около {target} ккал в день."
+
+
+def energy_target_maintain(target: str) -> str:
+    return f"🍽 Чтобы вес держался, ориентир по питанию — около {target} ккал в день."
+
+
+def energy_below_floor(rate: str) -> str:
+    return (
+        f"⚠️ При темпе {rate} кг в месяц норма питания получается слишком низкой — "
+        "ниже базового обмена, поэтому число не показываю."
+    )
+
+
+def energy_workouts(kind: ReportKind, kcal: str, counted: int, untimed: int) -> str:
+    """Period burn over workouts with a duration; the untimed ones are named, not guessed."""
+    basis = f"по {counted} {plural(counted, _COUNTED_WORKOUTS_PLURAL)}"
+    if untimed:
+        basis += f"; {untimed} {workouts_word(untimed)} без длительности не в счёт"
+    return f"⚡ {_ENERGY_PERIOD[kind]} на тренировках ~{kcal} ккал ({basis})."
+
+
+def energy_workouts_untimed(kind: ReportKind, untimed: int) -> str:
+    return (
+        f"⚡ {_ENERGY_PERIOD[kind]} расход на тренировках не посчитан: "
+        f"у {untimed} {plural(untimed, _UNTIMED_WORKOUTS_PLURAL)} нет длительности."
+    )
+
+
+def profile_nudge(fields: tuple[str, ...]) -> str:
+    """The one-time ask for the profile answers that hide the energy block."""
+    names = [_PROFILE_FIELD_NAMES[field] for field in fields]
+    listed = names[0] if len(names) == 1 else f"{', '.join(names[:-1])} и {names[-1]}"
+    return f"💡 Если указать в /profile {listed}, в отчёте появится расчёт калорий."

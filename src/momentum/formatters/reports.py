@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from momentum.db.models import GoalType
 from momentum.formatters.profile import fmt_number
+from momentum.services.energy import EnergyStats
 from momentum.services.measurements import FieldSnapshot, ReportBody, delta_is_good
 from momentum.services.pace import WEEKS_PER_MONTH
 from momentum.services.stats import MonthlyStats, WeeklyStats
@@ -41,7 +42,7 @@ def _by_type_block(by_type: tuple[tuple[str, int], ...]) -> str:
 
 
 def weekly_report(stats: WeeklyStats, body: ReportBody) -> str:
-    """Workout stats for the week, then the goal/measurements block for the same dates.
+    """Workout stats for the week, then the goal/measurements and energy blocks for the same dates.
 
     An empty gym week still gets the body block (reminder or facts) instead of
     returning only ``WEEKLY_EMPTY``.
@@ -51,17 +52,27 @@ def weekly_report(stats: WeeklyStats, body: ReportBody) -> str:
         f"{texts_common.fmt_date_short(stats.week_end)}"
     )
     head = f"{texts_reports.WEEKLY_TITLE}\n{period}"
-    return "\n\n".join((head, _weekly_workout_block(stats), _body_block(body, "week")))
+    return "\n\n".join((head, _weekly_workout_block(stats), *_body_blocks(body, "week")))
 
 
 def monthly_report(stats: MonthlyStats, body: ReportBody) -> str:
-    """Workout stats for the month, then the goal/measurements block for the same dates.
+    """Workout stats for the month, then the goal/measurements and energy blocks for the same dates.
 
     An empty gym month still gets the body block (reminder or facts) instead of
     returning only ``MONTHLY_EMPTY``.
     """
     head = f"{texts_reports.MONTHLY_TITLE}\n{texts_common.fmt_month_year(stats.month_start)}"
-    return "\n\n".join((head, _monthly_workout_block(stats), _body_block(body, "month")))
+    return "\n\n".join((head, _monthly_workout_block(stats), *_body_blocks(body, "month")))
+
+
+def _body_blocks(body: ReportBody, kind: texts_reports.ReportKind) -> list[str]:
+    """Goal/measurements, then energy and the one-time profile nudge when there are any."""
+    blocks = [_body_block(body, kind)]
+    if body.energy is not None:
+        blocks.append(_energy_block(body.energy, kind))
+    if body.profile_nudge:
+        blocks.append(texts_reports.profile_nudge(body.profile_nudge))
+    return blocks
 
 
 def _weekly_workout_block(stats: WeeklyStats) -> str:
@@ -218,3 +229,43 @@ def _pace_line(body: ReportBody) -> str | None:
     if pace.projected_date is None:
         return line
     return texts_reports.pace_eta(line, texts_common.fmt_date(pace.projected_date))
+
+
+def _energy_block(energy: EnergyStats, kind: texts_reports.ReportKind) -> str:
+    """Daily burn, the intake guide for the goal's pace, and what the workouts added."""
+    from_workouts = fmt_number(energy.daily_workout_kcal) if energy.daily_workout_kcal else None
+    lines = [texts_reports.energy_burn(fmt_number(energy.daily_burn), from_workouts)]
+    target = _energy_target_line(energy)
+    if target:
+        lines.append(target)
+    workouts = _energy_workouts_line(energy, kind)
+    if workouts:
+        lines.append(workouts)
+    return "\n".join(lines)
+
+
+def _energy_target_line(energy: EnergyStats) -> str | None:
+    rate = energy.target_kg_per_month
+    if rate is None:
+        return None
+    if energy.below_floor:
+        return texts_reports.energy_below_floor(_signed_delta(rate))
+    if energy.daily_target is None:
+        return None
+    target = fmt_number(energy.daily_target)
+    if rate == 0:
+        return texts_reports.energy_target_maintain(target)
+    return texts_reports.energy_target(_signed_delta(rate), target)
+
+
+def _energy_workouts_line(energy: EnergyStats, kind: texts_reports.ReportKind) -> str | None:
+    if energy.counted_workouts:
+        return texts_reports.energy_workouts(
+            kind,
+            fmt_number(energy.workout_kcal),
+            energy.counted_workouts,
+            energy.skipped_workouts,
+        )
+    if energy.skipped_workouts:
+        return texts_reports.energy_workouts_untimed(kind, energy.skipped_workouts)
+    return None

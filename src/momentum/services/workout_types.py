@@ -59,8 +59,8 @@ _FIELDS_BY_TYPE: dict[WorkoutType, tuple[FieldSpec, ...]] = {
     "running": (DURATION, DISTANCE, EFFORT, DESCRIPTION),
     "swimming": (DURATION, DISTANCE, EFFORT, DESCRIPTION),
     "elliptical": (DURATION, EFFORT, DESCRIPTION),
-    "gym": (BODY_PARTS_FIELD, DESCRIPTION),
-    "home_workout": (BODY_PARTS_FIELD, DURATION, DESCRIPTION),
+    "gym": (BODY_PARTS_FIELD, DURATION, EFFORT, DESCRIPTION),
+    "home_workout": (BODY_PARTS_FIELD, DURATION, EFFORT, DESCRIPTION),
 }
 
 
