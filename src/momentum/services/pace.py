@@ -57,7 +57,7 @@ class PaceStats:
     way. ``unsafe`` is lose-only. ``none`` means nothing to report: too few
     weigh-ins, or the target is already reached. ``projected_date`` is ``None``
     when the trend never reaches the target (or not within
-    ``MAX_PROJECTION_WEEKS``).
+    ``MAX_PROJECTION_WEEKS``). ``span_days`` is first-to-last weigh-in in the window.
     """
 
     actual_kg_per_week: float
@@ -65,6 +65,7 @@ class PaceStats:
     projected_date: date | None
     status: PaceStatus
     points: int
+    span_days: int
 
 
 def rate_presets(goal_type: GoalType) -> tuple[float, ...]:
@@ -98,12 +99,12 @@ def build_pace(rows: list[BodyMeasurement], goal: UserGoal | None, ref: date) ->
 
     span_days = (weighins[-1][0] - weighins[0][0]).days if weighins else 0
     if span_days < MIN_SPAN_DAYS:
-        return _nothing_to_report(required, points)
+        return _nothing_to_report(required, points, span_days)
 
     latest_on, latest_kg = weighins[-1]
     target = goal.target_weight_kg
     if target is not None and at_or_past_target(latest_kg, target, goal.goal_type):
-        return _nothing_to_report(required, points)
+        return _nothing_to_report(required, points, span_days)
 
     slope_per_day, trend_kg = _trend(weighins)
     actual = slope_per_day * 7
@@ -118,16 +119,18 @@ def build_pace(rows: list[BodyMeasurement], goal: UserGoal | None, ref: date) ->
         projected_date=projected,
         status=status,
         points=points,
+        span_days=span_days,
     )
 
 
-def _nothing_to_report(required: float | None, points: int) -> PaceStats:
+def _nothing_to_report(required: float | None, points: int, span_days: int) -> PaceStats:
     return PaceStats(
         actual_kg_per_week=0.0,
         required_kg_per_week=required,
         projected_date=None,
         status="none",
         points=points,
+        span_days=span_days,
     )
 
 

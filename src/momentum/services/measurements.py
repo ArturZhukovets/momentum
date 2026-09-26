@@ -120,11 +120,13 @@ class PeriodChange:
 class ReportBody:
     """Goal + period change + tone + pace + energy, ready for the weekly/monthly report formatter.
 
-    ``profile_nudge`` lists the profile answers to ask for; empty unless this
-    report is the one that carries the one-time nudge.
+    ``latest_weight`` is the newest weigh-in up to the period end, even one from
+    before the period. ``profile_nudge`` lists the profile answers to ask for;
+    empty unless this report is the one that carries the one-time nudge.
     """
 
     change: PeriodChange
+    latest_weight: FieldSnapshot | None
     goal: UserGoal | None
     tone: PeriodTone
     kg_left: float | None
@@ -195,11 +197,10 @@ def goal_direction(goal_type: GoalType) -> int:
     return 0
 
 
-def latest_weight_kg(rows: list[BodyMeasurement]) -> float | None:
+def latest_weight(rows: list[BodyMeasurement]) -> FieldSnapshot | None:
     """Newest non-null weight in ``rows`` (any order); circumference-only rows are skipped."""
     newest_first = sorted(rows, key=lambda r: (r.recorded_on, r.id), reverse=True)
-    latest = _latest_non_null(newest_first, "weight_kg")
-    return latest[0] if latest is not None else None
+    return _field_snapshot(newest_first, "weight_kg")
 
 
 def kg_left(change: PeriodChange, goal: UserGoal | None) -> float | None:

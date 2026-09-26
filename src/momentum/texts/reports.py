@@ -2,14 +2,29 @@
 
 from __future__ import annotations
 
-from typing import Literal
-
+from momentum.db.models import ReportKind
 from momentum.texts.common import plural, weeks_word, workouts_word
-
-ReportKind = Literal["week", "month"]
 
 WEEKLY_TITLE = "📊 <b>Отчёт за неделю</b>"
 MONTHLY_TITLE = "🗓 <b>Отчёт за месяц</b>"
+COACH_COMMENT_TITLE = "💬 <b>Комментарий тренера</b>"
+
+# How a coach comment spells a unit right after a number, mapped to `guard` unit names:
+# the guard matches that number only against facts in the same unit. Abbreviations
+# match as whole words (so «см» is not «смена»), the long forms as stems.
+COMMENT_UNIT_WORDS: dict[str, str] = {
+    "кг": "kg",
+    "кило": "kg",
+    "см": "cm",
+    "ккал": "kcal",
+    "%": "pct",
+}
+COMMENT_UNIT_STEMS: dict[str, str] = {
+    "килограмм": "kg",
+    "сантиметр": "cm",
+    "калори": "kcal",
+    "процент": "pct",
+}
 
 WEEKLY_EMPTY = "На этой неделе тренировок не было. Начнём новую серию? 💪"
 MONTHLY_EMPTY = "В этом месяце тренировок не было. Самое время начать! 💪"

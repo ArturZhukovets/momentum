@@ -176,3 +176,24 @@ class BodyMeasurement(Base):
     arm_cm: Mapped[float | None] = mapped_column(Float)
     note: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("''"))
     created_at: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+class ReportComment(Base):
+    """The coach comment last written for one report period.
+
+    One row per ``(user_id, kind, period_start)``, overwritten when the period's
+    facts change: ``facts_hash`` is the fingerprint of what the comment was written
+    from. An empty ``comment`` records that no draft passed the guard.
+    """
+
+    __tablename__ = "report_comments"
+    __table_args__ = (CheckConstraint("kind IN ('week','month')"),)
+
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True
+    )
+    kind: Mapped[str] = mapped_column(Text, primary_key=True)
+    period_start: Mapped[date] = mapped_column(Date, primary_key=True)
+    facts_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    comment: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[str] = mapped_column(Text, nullable=False)

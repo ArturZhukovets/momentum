@@ -12,6 +12,7 @@ ImprovementRequestStatus = Literal["new", "approved", "done", "rejected"]
 Sex = Literal["male", "female"]
 GoalType = Literal["lose", "gain", "maintain", "muscle"]
 WorkoutType = Literal["running", "swimming", "elliptical", "gym", "home_workout"]
+ReportKind = Literal["week", "month"]
 
 
 @dataclass(frozen=True)

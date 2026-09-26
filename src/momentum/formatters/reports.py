@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from momentum.db.models import GoalType
+from html import escape
+
+from momentum.db.models import GoalType, ReportKind
 from momentum.formatters.profile import fmt_number
 from momentum.services.energy import EnergyStats
 from momentum.services.measurements import FieldSnapshot, ReportBody, delta_is_good
@@ -41,8 +43,8 @@ def _by_type_block(by_type: tuple[tuple[str, int], ...]) -> str:
     return "\n".join(f"{texts_workout.type_label(t)}: {n}" for t, n in by_type)
 
 
-def weekly_report(stats: WeeklyStats, body: ReportBody) -> str:
-    """Workout stats for the week, then the goal/measurements and energy blocks for the same dates.
+def weekly_report(stats: WeeklyStats, body: ReportBody, comment: str | None = None) -> str:
+    """Workout stats for the week, the goal/measurements and energy blocks, then the coach comment.
 
     An empty gym week still gets the body block (reminder or facts) instead of
     returning only ``WEEKLY_EMPTY``.
@@ -52,20 +54,29 @@ def weekly_report(stats: WeeklyStats, body: ReportBody) -> str:
         f"{texts_common.fmt_date_short(stats.week_end)}"
     )
     head = f"{texts_reports.WEEKLY_TITLE}\n{period}"
-    return "\n\n".join((head, _weekly_workout_block(stats), *_body_blocks(body, "week")))
+    blocks = (head, _weekly_workout_block(stats), *_body_blocks(body, "week"))
+    return "\n\n".join((*blocks, *_comment_block(comment)))
 
 
-def monthly_report(stats: MonthlyStats, body: ReportBody) -> str:
-    """Workout stats for the month, then the goal/measurements and energy blocks for the same dates.
+def monthly_report(stats: MonthlyStats, body: ReportBody, comment: str | None = None) -> str:
+    """Workout stats for the month, the goal/measurements and energy blocks, then the coach comment.
 
     An empty gym month still gets the body block (reminder or facts) instead of
     returning only ``MONTHLY_EMPTY``.
     """
     head = f"{texts_reports.MONTHLY_TITLE}\n{texts_common.fmt_month_year(stats.month_start)}"
-    return "\n\n".join((head, _monthly_workout_block(stats), *_body_blocks(body, "month")))
+    blocks = (head, _monthly_workout_block(stats), *_body_blocks(body, "month"))
+    return "\n\n".join((*blocks, *_comment_block(comment)))
 
 
-def _body_blocks(body: ReportBody, kind: texts_reports.ReportKind) -> list[str]:
+def _comment_block(comment: str | None) -> tuple[str, ...]:
+    """The coach comment under its header; model text, so escaped for HTML parse mode."""
+    if not comment:
+        return ()
+    return (f"{texts_reports.COACH_COMMENT_TITLE}\n{escape(comment)}",)
+
+
+def _body_blocks(body: ReportBody, kind: ReportKind) -> list[str]:
     """Goal/measurements, then energy and the one-time profile nudge when there are any."""
     blocks = [_body_block(body, kind)]
     if body.energy is not None:
@@ -118,7 +129,7 @@ def _monthly_workout_block(stats: MonthlyStats) -> str:
     return "\n\n".join(blocks)
 
 
-def _body_block(body: ReportBody, kind: texts_reports.ReportKind) -> str:
+def _body_block(body: ReportBody, kind: ReportKind) -> str:
     """Goal line (if any), then in-period facts, tone and pace — or the weekly-rhythm reminder."""
     parts: list[str] = []
     if body.goal is not None:
@@ -146,7 +157,7 @@ def _body_block(body: ReportBody, kind: texts_reports.ReportKind) -> str:
     return "\n\n".join(parts)
 
 
-def _facts_line(body: ReportBody, kind: texts_reports.ReportKind) -> str | None:
+def _facts_line(body: ReportBody, kind: ReportKind) -> str | None:
     if not body.change.had_measurement:
         return None
     phrases = []
@@ -176,7 +187,7 @@ def _field_phrase(field: str, snap: FieldSnapshot, goal_type: GoalType | None) -
     return texts_reports.field_phrase(label, fmt_number(snap.value), unit, delta)
 
 
-def _tone_line(body: ReportBody, kind: texts_reports.ReportKind) -> str | None:
+def _tone_line(body: ReportBody, kind: ReportKind) -> str | None:
     if body.tone == "progress":
         left = fmt_number(body.kg_left) if body.kg_left is not None else None
         return texts_reports.tone_progress(kind, left)
@@ -231,7 +242,7 @@ def _pace_line(body: ReportBody) -> str | None:
     return texts_reports.pace_eta(line, texts_common.fmt_date(pace.projected_date))
 
 
-def _energy_block(energy: EnergyStats, kind: texts_reports.ReportKind) -> str:
+def _energy_block(energy: EnergyStats, kind: ReportKind) -> str:
     """Daily burn, the intake guide for the goal's pace, and what the workouts added."""
     from_workouts = fmt_number(energy.daily_workout_kcal) if energy.daily_workout_kcal else None
     lines = [texts_reports.energy_burn(fmt_number(energy.daily_burn), from_workouts)]
@@ -258,7 +269,7 @@ def _energy_target_line(energy: EnergyStats) -> str | None:
     return texts_reports.energy_target(_signed_delta(rate), target)
 
 
-def _energy_workouts_line(energy: EnergyStats, kind: texts_reports.ReportKind) -> str | None:
+def _energy_workouts_line(energy: EnergyStats, kind: ReportKind) -> str | None:
     if energy.counted_workouts:
         return texts_reports.energy_workouts(
             kind,
