@@ -9,9 +9,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from momentum.db.models import BodyMeasurement, GoalType, UserGoal
+
+if TYPE_CHECKING:
+    # `pace` builds on this module's noise constants, so a runtime import would cycle.
+    from momentum.services.pace import PaceStats
 
 MeasurementField = Literal["weight_kg", "waist_cm", "chest_cm", "hips_cm", "thigh_cm", "arm_cm"]
 PeriodTone = Literal["progress", "setback", "reached", "none"]
@@ -113,12 +117,13 @@ class PeriodChange:
 
 @dataclass(frozen=True)
 class ReportBody:
-    """Goal + period change + tone, ready for the weekly/monthly report formatter."""
+    """Goal + period change + tone + pace, ready for the weekly/monthly report formatter."""
 
     change: PeriodChange
     goal: UserGoal | None
     tone: PeriodTone
     kg_left: float | None
+    pace: PaceStats | None
 
 
 def build_period_change(rows: list[BodyMeasurement], start: date, end: date) -> PeriodChange:
@@ -144,7 +149,7 @@ def period_tone(change: PeriodChange, goal: UserGoal | None) -> PeriodTone:
 
     current = change.weight_kg.value
     target = goal.target_weight_kg
-    if target is not None and _at_or_past_target(current, target, goal.goal_type):
+    if target is not None and at_or_past_target(current, target, goal.goal_type):
         return "reached"
 
     delta = change.weight_kg.delta
@@ -168,11 +173,19 @@ def delta_is_good(delta: float, goal_type: GoalType | None) -> bool | None:
     Circumferences use the same polarity as weight: down is good on lose, up on
     gain/muscle.
     """
-    if goal_type is None or delta == 0 or goal_type == "maintain":
+    direction = goal_direction(goal_type) if goal_type is not None else 0
+    if direction == 0 or delta == 0:
         return None
+    return delta * direction > 0
+
+
+def goal_direction(goal_type: GoalType) -> int:
+    """-1 when the goal wants the weight down, +1 up, 0 for maintain."""
     if goal_type == "lose":
-        return delta < 0
-    return delta > 0
+        return -1
+    if goal_type in ("gain", "muscle"):
+        return 1
+    return 0
 
 
 def kg_left(change: PeriodChange, goal: UserGoal | None) -> float | None:
@@ -213,11 +226,8 @@ def _latest_non_null(
     return None
 
 
-def _at_or_past_target(current: float, target: float, goal_type: GoalType) -> bool:
+def at_or_past_target(current: float, target: float, goal_type: GoalType) -> bool:
+    """Within the noise band of ``target``, or beyond it in the goal's direction."""
     if abs(current - target) < WEIGHT_NOISE_KG:
         return True
-    if goal_type == "lose":
-        return current < target
-    if goal_type in ("gain", "muscle"):
-        return current > target
-    return False
+    return (current - target) * goal_direction(goal_type) > 0

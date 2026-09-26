@@ -14,7 +14,14 @@ from aiogram import Router
 from aiogram.types import CallbackQuery, Message
 
 from momentum.config import settings
-from momentum.keyboards.callbacks import GoalTypeCB, MeasureFieldCB, ProfileCB, SexCB, SkipCB
+from momentum.keyboards.callbacks import (
+    GoalRateCB,
+    GoalTypeCB,
+    MeasureFieldCB,
+    ProfileCB,
+    SexCB,
+    SkipCB,
+)
 from momentum.services import periods
 from momentum.texts import common as texts_common
 from momentum.texts import profile as texts_profile
@@ -34,6 +41,7 @@ STEP_SEX = "sex"
 STEP_HEIGHT = "height"
 STEP_GOAL_TYPE = "goal"
 STEP_TARGET_WEIGHT = "target"
+STEP_GOAL_RATE = "rate"
 STEP_WEIGHT = "weight"
 
 _NUMBER_RE = re.compile(r"^\s*(\d{1,3}(?:[.,]\d{1,2})?)\s*[a-zA-Zа-яёА-ЯЁ.]*\s*$")
@@ -82,6 +90,7 @@ async def read_birth_date(message: Message) -> date | None:
 @router.callback_query(SkipCB.filter())
 @router.callback_query(SexCB.filter())
 @router.callback_query(GoalTypeCB.filter())
+@router.callback_query(GoalRateCB.filter())
 @router.callback_query(ProfileCB.filter())
 @router.callback_query(MeasureFieldCB.filter())
 async def ignore_stale_click(callback: CallbackQuery) -> None:

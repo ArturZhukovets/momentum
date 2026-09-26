@@ -5,6 +5,7 @@ from __future__ import annotations
 from momentum.db.models import GoalType
 from momentum.formatters.profile import fmt_number
 from momentum.services.measurements import FieldSnapshot, ReportBody, delta_is_good
+from momentum.services.pace import WEEKS_PER_MONTH
 from momentum.services.stats import MonthlyStats, WeeklyStats
 from momentum.texts import common as texts_common
 from momentum.texts import measurements as texts_measurements
@@ -18,11 +19,11 @@ def _signed(n: int) -> str:
 
 def _signed_delta(value: float) -> str:
     formatted = fmt_number(abs(value))
+    if formatted == "0":
+        return formatted
     if value > 0:
         return f"+{formatted}"
-    if value < 0:
-        return f"−{formatted}"
-    return formatted
+    return f"−{formatted}"
 
 
 def _diff_line(diff: int, pct: int | None) -> str:
@@ -107,7 +108,7 @@ def _monthly_workout_block(stats: MonthlyStats) -> str:
 
 
 def _body_block(body: ReportBody, kind: texts_reports.ReportKind) -> str:
-    """Goal line (if any), then either in-period facts and tone or the weekly-rhythm reminder."""
+    """Goal line (if any), then in-period facts, tone and pace — or the weekly-rhythm reminder."""
     parts: list[str] = []
     if body.goal is not None:
         target = (
@@ -128,6 +129,9 @@ def _body_block(body: ReportBody, kind: texts_reports.ReportKind) -> str:
     tone = _tone_line(body, kind)
     if tone:
         parts.append(tone)
+    pace = _pace_line(body)
+    if pace:
+        parts.append(pace)
     return "\n\n".join(parts)
 
 
@@ -170,3 +174,47 @@ def _tone_line(body: ReportBody, kind: texts_reports.ReportKind) -> str | None:
     if body.tone == "reached":
         return texts_reports.TONE_REACHED
     return None
+
+
+def _per_month(kg_per_week: float) -> str:
+    return _signed_delta(kg_per_week * WEEKS_PER_MONTH)
+
+
+def _pace_line(body: ReportBody) -> str | None:
+    """Trend vs plan in kg/month.
+
+    Only when this period has a weigh-in, so the verdict and the projection are
+    anchored to fresh data; never once the goal is reached or data is thin.
+    """
+    pace, goal = body.pace, body.goal
+    if pace is None or goal is None or pace.status == "none" or body.tone == "reached":
+        return None
+    if body.change.weight_kg is None:
+        return None
+
+    actual = _per_month(pace.actual_kg_per_week)
+    if pace.status == "unsafe":
+        return texts_reports.pace_unsafe(actual)
+    if goal.goal_type == "maintain":
+        if pace.status == "on_track":
+            return texts_reports.PACE_HOLDING
+        return texts_reports.pace_drifting(actual)
+    if pace.status == "stalled":
+        if actual != "0" and delta_is_good(pace.actual_kg_per_week, goal.goal_type) is False:
+            return texts_reports.pace_away(actual)
+        return texts_reports.PACE_STALLED
+
+    if pace.required_kg_per_week is None:
+        line = texts_reports.pace_no_plan(actual)
+    else:
+        planned = _per_month(pace.required_kg_per_week)
+        if pace.status == "ahead":
+            line = texts_reports.pace_ahead(actual, planned)
+        elif pace.status == "on_track":
+            line = texts_reports.pace_on_track(actual, planned)
+        else:
+            line = texts_reports.pace_behind(actual, planned)
+
+    if pace.projected_date is None:
+        return line
+    return texts_reports.pace_eta(line, texts_common.fmt_date(pace.projected_date))

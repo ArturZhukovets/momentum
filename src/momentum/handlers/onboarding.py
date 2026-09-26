@@ -4,11 +4,11 @@
 lands in `user_profiles`, `user_goals` and `body_measurements`. Every
 question can be skipped, so all three tables hold nullable answers.
 
-The goal-type/target-weight steps (`Onboarding.goal_type`,
-`Onboarding.target_weight`) are also entered from `/goal` (see
-`handlers/goal.py`'s `start_goal`, which calls `_ask_goal_type` here with
-`step=None`) — they stay in this module because the states themselves are
-named `Onboarding.*`.
+The goal-type/target-weight/pace steps (`Onboarding.goal_type`,
+`Onboarding.target_weight`, `Onboarding.goal_rate`) are also entered from
+`/goal` (see `handlers/goal.py`'s `start_goal`, which calls `_ask_goal_type`
+here with `step=None`) — they stay in this module because the states
+themselves are named `Onboarding.*`.
 """
 
 from __future__ import annotations
@@ -26,6 +26,7 @@ from momentum.formatters import profile as fmt_profile
 from momentum.handlers._profile_common import (
     HEIGHT_CM_RANGE,
     STEP_BIRTH_DATE,
+    STEP_GOAL_RATE,
     STEP_GOAL_TYPE,
     STEP_HEIGHT,
     STEP_SEX,
@@ -38,8 +39,8 @@ from momentum.handlers._profile_common import (
 from momentum.handlers._prompts import drop_prompt_kb, send_prompt
 from momentum.keyboards import common as kb_common
 from momentum.keyboards import profile as kb_profile
-from momentum.keyboards.callbacks import GoalTypeCB, ProfileCB, SexCB, SkipCB
-from momentum.services import periods
+from momentum.keyboards.callbacks import GoalRateCB, GoalTypeCB, ProfileCB, SexCB, SkipCB
+from momentum.services import pace, periods
 from momentum.states import Onboarding
 from momentum.texts import common as texts_common
 from momentum.texts import profile as texts_profile
@@ -68,6 +69,9 @@ async def offer_onboarding(message: Message, state: FSMContext) -> None:
 async def confirm_onboarding(callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
     await callback.answer()
     await callback.message.edit_reply_markup(reply_markup=None)
+    # An abandoned /goal leaves `goal_only` behind, which would end onboarding
+    # early without ever writing the profile row.
+    await state.clear()
     await _ask_birth_date(bot, callback.message.chat.id, state)
 
 
@@ -224,11 +228,53 @@ async def got_target_weight(message: Message, state: FSMContext, bot: Bot) -> No
 
     await drop_prompt_kb(bot, message.chat.id, state)
     await state.update_data(target_weight_kg=weight)
-    await _after_goal_steps(bot, message.chat.id, message.from_user.id, state)
+    await _ask_goal_rate(bot, message.chat.id, message.from_user.id, state)
 
 
 @router.callback_query(Onboarding.target_weight, SkipCB.filter(F.step == STEP_TARGET_WEIGHT))
 async def skip_target_weight(callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
+    await callback.answer()
+    await callback.message.edit_reply_markup(reply_markup=None)
+    await _ask_goal_rate(bot, callback.message.chat.id, callback.from_user.id, state)
+
+
+async def _ask_goal_rate(bot: Bot, chat_id: int, user_id: int, state: FSMContext) -> None:
+    """Skipped outright for maintain — there is no pace to choose."""
+    goal_type = (await state.get_data()).get("goal_type")
+    if not pace.rate_presets(goal_type):
+        await _after_goal_steps(bot, chat_id, user_id, state)
+        return
+
+    await state.set_state(Onboarding.goal_rate)
+    await send_prompt(
+        bot,
+        chat_id,
+        state,
+        texts_profile.ASK_GOAL_RATE,
+        kb_profile.goal_rate_kb(goal_type, STEP_GOAL_RATE, cancel=False),
+    )
+
+
+@router.callback_query(Onboarding.goal_rate, GoalRateCB.filter())
+async def got_goal_rate(
+    callback: CallbackQuery, callback_data: GoalRateCB, state: FSMContext, bot: Bot
+) -> None:
+    await callback.answer()
+    data = await state.get_data()
+    # Presets overlap across goal types, so a leftover keyboard is told apart by
+    # message id, and the value is checked against this goal type's presets.
+    if callback.message.message_id != data.get("prompt_id"):
+        return
+    if callback_data.value not in pace.rate_presets(data.get("goal_type")):
+        return
+
+    await callback.message.edit_reply_markup(reply_markup=None)
+    await state.update_data(target_rate_kg_per_month=callback_data.value)
+    await _after_goal_steps(bot, callback.message.chat.id, callback.from_user.id, state)
+
+
+@router.callback_query(Onboarding.goal_rate, SkipCB.filter(F.step == STEP_GOAL_RATE))
+async def skip_goal_rate(callback: CallbackQuery, state: FSMContext, bot: Bot) -> None:
     await callback.answer()
     await callback.message.edit_reply_markup(reply_markup=None)
     await _after_goal_steps(bot, callback.message.chat.id, callback.from_user.id, state)
@@ -256,6 +302,7 @@ async def _save_goal_only(bot: Bot, chat_id: int, user_id: int, state: FSMContex
         goal_type=goal_type,
         start_weight_kg=start_weight,
         target_weight_kg=data.get("target_weight_kg"),
+        target_rate_kg_per_month=data.get("target_rate_kg_per_month"),
     )
 
     goal = await db_goals.get_active_goal(user_id)
@@ -327,6 +374,7 @@ async def _finish_onboarding(bot: Bot, chat_id: int, user_id: int, state: FSMCon
             goal_type=goal_type,
             start_weight_kg=weight,
             target_weight_kg=data.get("target_weight_kg"),
+            target_rate_kg_per_month=data.get("target_rate_kg_per_month"),
         )
 
     await bot.send_message(
@@ -339,7 +387,7 @@ async def _finish_onboarding(bot: Bot, chat_id: int, user_id: int, state: FSMCon
 # --------------------------------------------------------------------------
 
 
-@router.message(StateFilter(Onboarding.sex, Onboarding.goal_type))
+@router.message(StateFilter(Onboarding.sex, Onboarding.goal_type, Onboarding.goal_rate))
 async def expects_button(message: Message) -> None:
     await message.answer(texts_profile.ERR_USE_BUTTONS)
 

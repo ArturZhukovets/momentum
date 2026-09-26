@@ -137,5 +137,62 @@ def tone_setback(kind: ReportKind) -> str:
     return _TONE_SETBACK[kind]
 
 
+# Pace line — `actual`/`planned` are signed and formatted, in kg per month.
+
+
+def pace_ahead(actual: str, planned: str) -> str:
+    return f"🚀 Идёшь быстрее плана: {actual} кг в месяц при плане {planned} кг."
+
+
+def pace_on_track(actual: str, planned: str) -> str:
+    return f"✅ Идёшь в графике: {actual} кг в месяц при плане {planned} кг."
+
+
+def pace_behind(actual: str, planned: str) -> str:
+    return (
+        f"🐢 Пока отстаёшь от плана: {actual} кг в месяц при плане {planned} кг. "
+        "Это не провал — темп выравнивается, если держать режим."
+    )
+
+
+def pace_no_plan(actual: str) -> str:
+    return f"🧭 Текущий темп: {actual} кг в месяц."
+
+
+PACE_STALLED = (
+    "⏸ Последние недели вес стоит на месте. "
+    "Если так и дальше — стоит пересмотреть питание или нагрузку."
+)
+
+
+def pace_away(actual: str) -> str:
+    return (
+        f"↩️ Последние недели вес идёт в обратную от цели сторону: {actual} кг в месяц. "
+        "Стоит пересмотреть питание или нагрузку."
+    )
+
+
+def pace_unsafe(actual: str) -> str:
+    return (
+        f"⚠️ Вес уходит слишком быстро: {actual} кг в месяц. "
+        "Так уходят вода и мышцы, а не жир — стоит сбавить темп."
+    )
+
+
+PACE_HOLDING = "⚖️ Вес держится ровно — форма под контролем."
+
+
+def pace_drifting(actual: str) -> str:
+    return (
+        f"⚖️ Вес смещается: {actual} кг в месяц. "
+        "Стоит присмотреться к питанию и нагрузке, чтобы удержать форму."
+    )
+
+
+def pace_eta(line: str, eta: str) -> str:
+    """Append the projected date (already formatted) to a pace sentence."""
+    return f"{line} Если темп сохранится, цель — примерно к {eta}."
+
+
 def no_measurements(kind: ReportKind) -> str:
     return _NO_MEASUREMENTS[kind]

@@ -83,7 +83,7 @@ class UserGoal:
     goal_type: GoalType
     start_weight_kg: float | None
     target_weight_kg: float | None
-    target_date: date | None
+    target_rate_kg_per_month: float | None  # unsigned; the direction is `goal_type`
     note: str
     is_active: bool
     created_at: datetime

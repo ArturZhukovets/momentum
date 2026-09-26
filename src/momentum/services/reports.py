@@ -22,6 +22,7 @@ from momentum.services.measurements import (
     kg_left,
     period_tone,
 )
+from momentum.services.pace import build_pace
 
 log = logging.getLogger(__name__)
 
@@ -53,11 +54,12 @@ async def build_monthly_text(user_id: int, ref: date) -> str:
 
 
 async def _report_body(user_id: int, start: date, end: date) -> ReportBody:
-    """Active goal and in-period measurement change (pre-period rows as baseline).
+    """Active goal, in-period measurement change (pre-period rows as baseline) and pace.
 
     Loads every measurement up to ``end`` with no ``start`` bound, so deltas can
     use the last value before the period. Whether anything was recorded inside
-    the window is decided by ``build_period_change``.
+    the window is decided by ``build_period_change``; the pace trims its own
+    window from the same rows.
     """
     goal = await db_goals.get_active_goal(user_id)
     rows = await db_measurements.list_measurements(user_id, end=end)
@@ -67,6 +69,7 @@ async def _report_body(user_id: int, start: date, end: date) -> ReportBody:
         goal=goal,
         tone=period_tone(change, goal),
         kg_left=kg_left(change, goal),
+        pace=build_pace(rows, goal, end),
     )
 
 

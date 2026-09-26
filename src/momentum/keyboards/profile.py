@@ -1,12 +1,22 @@
-"""Onboarding and profile flows: sex, goal type, skip, profile edit, measure."""
+"""Onboarding and profile flows: sex, goal type and pace, skip, profile edit, measure."""
 
 from __future__ import annotations
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from momentum.keyboards.callbacks import GoalTypeCB, MeasureFieldCB, ProfileCB, SexCB, SkipCB
+from momentum.db.models import GoalType
+from momentum.formatters import profile as fmt_profile
+from momentum.keyboards.callbacks import (
+    GoalRateCB,
+    GoalTypeCB,
+    MeasureFieldCB,
+    ProfileCB,
+    SexCB,
+    SkipCB,
+)
 from momentum.keyboards.common import CANCEL_BUTTON
+from momentum.services import pace
 from momentum.texts import common as texts_common
 from momentum.texts import profile as texts_profile
 
@@ -56,6 +66,22 @@ def goal_type_kb(step: str | None = None, *, cancel: bool = True) -> InlineKeybo
     if cancel:
         builder.row(CANCEL_BUTTON)
     return builder.as_markup()
+
+
+def goal_rate_kb(goal_type: GoalType, step: str, *, cancel: bool = True) -> InlineKeyboardMarkup:
+    """One row of pace presets for `goal_type`, then «skip» (the pace is always optional)."""
+    rows = [
+        [
+            InlineKeyboardButton(
+                text=fmt_profile.fmt_rate(value), callback_data=GoalRateCB(value=value).pack()
+            )
+            for value in pace.rate_presets(goal_type)
+        ],
+        [_skip_button(step)],
+    ]
+    if cancel:
+        rows.append([CANCEL_BUTTON])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def start_onboarding_kb() -> InlineKeyboardMarkup:

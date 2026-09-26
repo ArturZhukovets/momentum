@@ -124,6 +124,11 @@ class UserGoal(Base):
         CheckConstraint("goal_type IN ('lose','gain','maintain','muscle')"),
         CheckConstraint("start_weight_kg IS NULL OR start_weight_kg > 0"),
         CheckConstraint("target_weight_kg IS NULL OR target_weight_kg > 0"),
+        # Named so a migration can drop it; the sign lives in `goal_type`, not here.
+        CheckConstraint(
+            "target_rate_kg_per_month IS NULL OR target_rate_kg_per_month > 0",
+            name="ck_user_goals_target_rate_positive",
+        ),
         # One active goal per user; a second insert raises IntegrityError.
         Index("ux_user_goals_active", "user_id", unique=True, sqlite_where=text("is_active = 1")),
         {"sqlite_autoincrement": True},
@@ -136,7 +141,7 @@ class UserGoal(Base):
     goal_type: Mapped[str] = mapped_column(Text, nullable=False)
     start_weight_kg: Mapped[float | None] = mapped_column(Float)
     target_weight_kg: Mapped[float | None] = mapped_column(Float)
-    target_date: Mapped[date | None] = mapped_column(Date)
+    target_rate_kg_per_month: Mapped[float | None] = mapped_column(Float)
     note: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("''"))
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("1"))
     created_at: Mapped[str] = mapped_column(Text, nullable=False)
