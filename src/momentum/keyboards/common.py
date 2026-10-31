@@ -11,6 +11,7 @@ from aiogram.types import (
 
 from momentum.keyboards.callbacks import ActionCB
 from momentum.texts import common as texts_common
+from momentum.texts import whats_new as texts_whats_new
 
 CANCEL_BUTTON = InlineKeyboardButton(
     text=texts_common.BTN_CANCEL, callback_data=ActionCB(name="cancel").pack()
@@ -30,6 +31,7 @@ def main_menu() -> ReplyKeyboardMarkup:
                 KeyboardButton(text=texts_common.BTN_MONTH),
             ],
             [KeyboardButton(text=texts_common.BTN_MEASURE)],
+            [KeyboardButton(text=texts_whats_new.BTN_WHATS_NEW)],
         ],
         resize_keyboard=True,
         is_persistent=True,

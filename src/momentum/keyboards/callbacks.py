@@ -62,6 +62,10 @@ class GoalRateCB(CallbackData, prefix="grate"):
     value: float  # kg/month, one of `pace.RATE_PRESETS` for the chosen goal type
 
 
+class WhatsNewCB(CallbackData, prefix="news"):
+    version: str  # a key of `texts.whats_new.RELEASES`
+
+
 class ProfileCB(CallbackData, prefix="prof"):
     # show | edit_sex | edit_birth | edit_height | new_goal | body_measure | measure_save
     # | measure_confirm | measure_edit

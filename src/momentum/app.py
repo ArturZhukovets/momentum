@@ -28,6 +28,7 @@ from momentum.handlers import (
     measure,
     onboarding,
     suggestions,
+    whats_new,
 )
 from momentum.handlers import profile as profile_handlers
 from momentum.handlers import reports as reports_handlers
@@ -57,6 +58,8 @@ def build_dispatcher() -> Dispatcher:
     # Before the FSM-scoped routers so /admin works mid-flow, like /cancel does.
     dp.include_router(admin.router)
     dp.include_router(admin.denied_router)
+    # Read-only and state-agnostic, so it also answers mid-flow without disturbing it.
+    dp.include_router(whats_new.router)
     dp.include_router(add_workout.router)
     dp.include_router(onboarding.router)
     dp.include_router(profile_handlers.router)
