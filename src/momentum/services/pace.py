@@ -17,23 +17,21 @@ from momentum.services import periods
 from momentum.services.measurements import (
     MAINTAIN_NOISE_KG,
     WEIGHT_NOISE_KG,
-    at_or_past_target,
     goal_direction,
+    goal_reached,
 )
 
 PaceStatus = Literal["ahead", "on_track", "behind", "stalled", "unsafe", "none"]
 
 WEEKS_PER_MONTH = 4.345
 PACE_WINDOW_WEEKS = 8
-# Weigh-ins closer together than this make a slope out of water noise.
-MIN_SPAN_DAYS = 7
+# Below either, the slope is first-week water and noise rather than a trend: no verdict.
+MIN_TREND_WEIGHINS = 3
+MIN_TREND_SPAN_DAYS = 14
 # Within ±25% of the planned pace counts as on track.
 ON_TRACK_TOLERANCE = 0.25
 # Losing more than this share of body weight a week costs muscle, not just fat.
 UNSAFE_WEEKLY_LOSS_SHARE = 0.01
-# A first-diet-week water drop looks unsafe on two points; the warning needs a real trend.
-UNSAFE_MIN_POINTS = 3
-UNSAFE_MIN_SPAN_DAYS = 14
 # A projection further out than this is a guess, not a forecast.
 MAX_PROJECTION_WEEKS = 104
 
@@ -54,8 +52,9 @@ class PaceStats:
     ``0`` for maintain. With no plan, moving toward the goal is ``on_track``;
     ``stalled`` covers both standing still and moving away. For maintain,
     ``on_track`` means the weight holds and ``behind`` that it drifts either
-    way. ``unsafe`` is lose-only. ``none`` means nothing to report: too few
-    weigh-ins, or the target is already reached. ``projected_date`` is ``None``
+    way. ``unsafe`` is lose-only. ``none`` means nothing to report: the trend
+    isn't ready (fewer than ``MIN_TREND_WEIGHINS`` over ``MIN_TREND_SPAN_DAYS``),
+    or the target is already reached. ``projected_date`` is ``None``
     when the trend never reaches the target (or not within
     ``MAX_PROJECTION_WEEKS``). ``span_days`` is first-to-last weigh-in in the window.
     """
@@ -98,17 +97,16 @@ def build_pace(rows: list[BodyMeasurement], goal: UserGoal | None, ref: date) ->
     points = len(weighins)
 
     span_days = (weighins[-1][0] - weighins[0][0]).days if weighins else 0
-    if span_days < MIN_SPAN_DAYS:
+    if points < MIN_TREND_WEIGHINS or span_days < MIN_TREND_SPAN_DAYS:
         return _nothing_to_report(required, points, span_days)
 
     latest_on, latest_kg = weighins[-1]
-    target = goal.target_weight_kg
-    if target is not None and at_or_past_target(latest_kg, target, goal.goal_type):
+    if goal_reached(goal, latest_kg):
         return _nothing_to_report(required, points, span_days)
 
     slope_per_day, trend_kg = _trend(weighins)
     actual = slope_per_day * 7
-    if _is_unsafe(goal.goal_type, actual, latest_kg, points, span_days):
+    if _is_unsafe(goal.goal_type, actual, latest_kg):
         status: PaceStatus = "unsafe"
     else:
         status = _status(goal.goal_type, actual, required, span_days / 7)
@@ -151,7 +149,7 @@ def _required_kg_per_week(goal: UserGoal) -> float | None:
 def _trend(weighins: list[tuple[date, float]]) -> tuple[float, float]:
     """Least-squares (slope kg/day, fitted weight at the latest weigh-in).
 
-    The caller guarantees at least two distinct dates.
+    The caller guarantees at least two distinct dates (a non-zero span).
     """
     origin = weighins[0][0]
     xs = [(recorded_on - origin).days for recorded_on, _ in weighins]
@@ -164,16 +162,9 @@ def _trend(weighins: list[tuple[date, float]]) -> tuple[float, float]:
     return slope, mean_y + slope * (xs[-1] - mean_x)
 
 
-def _is_unsafe(
-    goal_type: GoalType, actual: float, weight_kg: float, points: int, span_days: int
-) -> bool:
+def _is_unsafe(goal_type: GoalType, actual: float, weight_kg: float) -> bool:
     """Losing too fast on purpose; other goals losing weight read as stalled/drifting."""
-    return (
-        goal_type == "lose"
-        and points >= UNSAFE_MIN_POINTS
-        and span_days >= UNSAFE_MIN_SPAN_DAYS
-        and -actual > UNSAFE_WEEKLY_LOSS_SHARE * weight_kg
-    )
+    return goal_type == "lose" and -actual > UNSAFE_WEEKLY_LOSS_SHARE * weight_kg
 
 
 def _status(

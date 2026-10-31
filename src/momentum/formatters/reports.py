@@ -7,7 +7,12 @@ from html import escape
 from momentum.db.models import GoalType, ReportKind
 from momentum.formatters.profile import fmt_number
 from momentum.services.energy import EnergyStats
-from momentum.services.measurements import FieldSnapshot, ReportBody, delta_is_good
+from momentum.services.measurements import (
+    FieldSnapshot,
+    ReportBody,
+    delta_is_good,
+    reported_pace,
+)
 from momentum.services.pace import WEEKS_PER_MONTH
 from momentum.services.stats import MonthlyStats, WeeklyStats
 from momentum.texts import common as texts_common
@@ -189,6 +194,9 @@ def _field_phrase(field: str, snap: FieldSnapshot, goal_type: GoalType | None) -
 
 def _tone_line(body: ReportBody, kind: ReportKind) -> str | None:
     if body.tone == "progress":
+        # Maintain's progress is holding still: no distance left, no "closer than last week".
+        if body.goal is not None and body.goal.goal_type == "maintain":
+            return texts_reports.tone_holding(kind)
         left = fmt_number(body.kg_left) if body.kg_left is not None else None
         return texts_reports.tone_progress(kind, left)
     if body.tone == "setback":
@@ -203,15 +211,9 @@ def _per_month(kg_per_week: float) -> str:
 
 
 def _pace_line(body: ReportBody) -> str | None:
-    """Trend vs plan in kg/month.
-
-    Only when this period has a weigh-in, so the verdict and the projection are
-    anchored to fresh data; never once the goal is reached or data is thin.
-    """
-    pace, goal = body.pace, body.goal
-    if pace is None or goal is None or pace.status == "none" or body.tone == "reached":
-        return None
-    if body.change.weight_kg is None:
+    """Trend vs plan in kg/month — only the verdict ``reported_pace`` lets the report print."""
+    pace, goal = reported_pace(body), body.goal
+    if pace is None or goal is None:
         return None
 
     actual = _per_month(pace.actual_kg_per_week)
@@ -222,7 +224,8 @@ def _pace_line(body: ReportBody) -> str | None:
             return texts_reports.PACE_HOLDING
         return texts_reports.pace_drifting(actual)
     if pace.status == "stalled":
-        if actual != "0" and delta_is_good(pace.actual_kg_per_week, goal.goal_type) is False:
+        monthly_kg = round(pace.actual_kg_per_week * WEEKS_PER_MONTH, 1)
+        if monthly_kg and delta_is_good(monthly_kg, goal.goal_type) is False:
             return texts_reports.pace_away(actual)
         return texts_reports.PACE_STALLED
 

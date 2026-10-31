@@ -67,7 +67,6 @@ async def cmd_start(message: Message, state: FSMContext, bot: Bot) -> None:
         await message.answer(texts_common.start_greeting(name), reply_markup=ReplyKeyboardRemove())
         await typing_delay(bot, message.chat.id)
         await onboarding_handlers.offer_onboarding(message, state)
-   
 
 
 @router.message(Command("help"))

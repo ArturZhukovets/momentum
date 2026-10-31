@@ -15,7 +15,7 @@ from typing import Literal
 
 from momentum.db.models import Sex, UserGoal, UserProfile, WorkoutStatRow, WorkoutType
 from momentum.services import periods
-from momentum.services.measurements import at_or_past_target
+from momentum.services.measurements import goal_reached
 from momentum.services.pace import WEEKS_PER_MONTH, planned_kg_per_month
 from momentum.services.workout_types import EFFORT_VALUES
 
@@ -46,6 +46,9 @@ KCAL_PER_KG = 7700
 # The month the pace line uses, so "2 kg a month" means the same thing across the report.
 DAYS_PER_MONTH = WEEKS_PER_MONTH * 7
 ROUND_KCAL_TO = 50
+# A guide below roughly the basal rate is withheld. "Roughly" is 90%: the reference
+# case (−2 kg/month at a 1855 kcal BMR, ~1700–1900 kcal a day) must keep its number.
+FLOOR_SHARE_OF_BMR = 0.9
 # Workout burn is averaged over the days elapsed, but never fewer than a week's worth,
 # so one fresh session isn't spread over a single day.
 MIN_AVERAGING_DAYS = 7
@@ -56,12 +59,13 @@ class EnergyStats:
     """Daily burn and intake guide for one report period.
 
     Every kcal field except ``bmr`` is rounded to ``ROUND_KCAL_TO``. Workout
-    figures cover only workouts with a recorded duration; the rest are
-    ``skipped_workouts``. ``target_kg_per_month`` is the goal's signed pace
-    (``0`` for maintain) and ``None`` when there is no guide to give: no goal, a
-    skipped pace, or the target already reached. ``daily_target`` is ``None``
-    then, and also when the guide would fall below the basal rate — the one
-    number the report refuses to print (``below_floor``).
+    figures cover only workouts with a recorded duration (and a known type); the
+    rest are ``skipped_workouts``. ``target_kg_per_month`` is the goal's signed
+    pace (``0`` for maintain) and ``None`` when there is no guide to give: no
+    goal, a skipped pace, or the target already reached. ``daily_target`` is
+    ``None`` then, and also when the guide would fall below
+    ``FLOOR_SHARE_OF_BMR`` of the basal rate — the one number the report refuses
+    to print (``below_floor``).
     """
 
     workout_kcal: int
@@ -88,12 +92,16 @@ def basal_rate(sex: Sex, age: int, height_cm: float, weight_kg: float) -> float:
 
 
 def session_kcal(workout: WorkoutStatRow, weight_kg: float) -> float | None:
-    """Burn of one workout; ``None`` without a duration. A missing effort counts as moderate."""
-    if workout.duration_min is None:
+    """Burn of one workout; ``None`` without a duration or for a type with no MET row.
+
+    A missing effort counts as moderate. A new workout type without a MET row is
+    skipped rather than allowed to break every report and the broadcast.
+    """
+    met_by_effort = MET_BY_EFFORT.get(workout.workout_type)
+    if workout.duration_min is None or met_by_effort is None:
         return None
     effort = workout.effort if workout.effort in EFFORT_VALUES else DEFAULT_EFFORT
-    met = MET_BY_EFFORT[workout.workout_type][effort]
-    return met * KCAL_PER_MET_KG_MIN * weight_kg * workout.duration_min
+    return met_by_effort[effort] * KCAL_PER_MET_KG_MIN * weight_kg * workout.duration_min
 
 
 def build_energy(
@@ -135,8 +143,7 @@ def build_energy(
     target = None
     if kg_per_month is not None:
         target = _round_kcal(daily_burn + kg_per_month * KCAL_PER_KG / DAYS_PER_MONTH)
-    # "About BMR" is the basal rate rounded like the guide itself; below it, no number.
-    below_floor = target is not None and target < _round_kcal(bmr)
+    below_floor = target is not None and target < _round_kcal(bmr * FLOOR_SHARE_OF_BMR)
 
     return EnergyStats(
         # A short session still burned something; it must not read as «~0 kcal».
@@ -153,16 +160,10 @@ def build_energy(
 
 
 def _guide_kg_per_month(goal: UserGoal | None, weight_kg: float) -> float | None:
-    """The pace the guide is built for; ``None`` once a lose/gain/muscle target is reached."""
-    if goal is None:
+    """The pace the guide is built for; ``None`` without a goal or once its target is reached."""
+    if goal is None or goal_reached(goal, weight_kg):
         return None
-    target = goal.target_weight_kg
-    reached = (
-        goal.goal_type != "maintain"
-        and target is not None
-        and at_or_past_target(weight_kg, target, goal.goal_type)
-    )
-    return None if reached else planned_kg_per_month(goal)
+    return planned_kg_per_month(goal)
 
 
 def _round_kcal(kcal: float) -> int:

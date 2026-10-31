@@ -37,12 +37,7 @@ class Base(DeclarativeBase):
 
 
 class User(Base):
-    """Telegram identity plus bot-side state — nothing here is asked of the user.
-
-    Identity columns are written only by ``common.UserMiddleware``; ``reports_on``
-    (the subscription) and ``profile_nudge_at`` (when the one-time "fill in your
-    profile" line went out) are the bot's own state.
-    """
+    """Telegram identity only — written solely by ``common.UserMiddleware``."""
 
     __tablename__ = "users"
 
@@ -51,7 +46,18 @@ class User(Base):
     first_name: Mapped[str | None] = mapped_column(Text)
     reports_on: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("1"))
     created_at: Mapped[str] = mapped_column(Text, nullable=False)
-    profile_nudge_at: Mapped[str | None] = mapped_column(Text)
+
+
+class UserNotice(Base):
+    """One-time notices already sent: a row per ``(user_id, notice)``, never repeated."""
+
+    __tablename__ = "user_notices"
+
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True
+    )
+    notice: Mapped[str] = mapped_column(Text, primary_key=True)
+    sent_at: Mapped[str] = mapped_column(Text, nullable=False)
 
 
 class Workout(Base):

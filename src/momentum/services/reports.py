@@ -12,6 +12,7 @@ from aiogram.exceptions import TelegramForbiddenError, TelegramRetryAfter
 from momentum.config import settings
 from momentum.db import goals as db_goals
 from momentum.db import measurements as db_measurements
+from momentum.db import notices as db_notices
 from momentum.db import profiles as db_profiles
 from momentum.db import report_comments as db_report_comments
 from momentum.db import users as db_users
@@ -20,7 +21,7 @@ from momentum.db.models import UserProfile, WorkoutStatRow
 from momentum.formatters import reports as fmt_reports
 from momentum.services import periods, stats
 from momentum.services.energy import ProfileField, build_energy, missing_profile_fields
-from momentum.services.llm import graph as llm_graph
+from momentum.services.llm import writer as llm_writer
 from momentum.services.llm.facts import ReportFacts, build_facts
 from momentum.services.measurements import (
     ReportBody,
@@ -51,7 +52,7 @@ async def build_weekly_text(user_id: int, ref: date, *, read_only: bool = False)
     body = await _report_body(
         user_id, ref, period_start, period_end, workouts_for_stats, profile, read_only=read_only
     )
-    comment = await _coach_comment(user_id, ref, workout_stats, body, profile)
+    comment = await _coach_comment(user_id, workout_stats, body, profile)
     return fmt_reports.weekly_report(workout_stats, body, comment)
 
 
@@ -70,7 +71,7 @@ async def build_monthly_text(user_id: int, ref: date, *, read_only: bool = False
     body = await _report_body(
         user_id, ref, month_start, month_end, workouts_for_stats, profile, read_only=read_only
     )
-    comment = await _coach_comment(user_id, ref, workout_stats, body, profile)
+    comment = await _coach_comment(user_id, workout_stats, body, profile)
     return fmt_reports.monthly_report(workout_stats, body, comment)
 
 
@@ -122,12 +123,11 @@ async def _profile_nudge(
     missing = missing_profile_fields(profile)
     if not missing or weight_kg is None or read_only:
         return ()
-    return missing if await db_users.claim_profile_nudge(user_id) else ()
+    return missing if await db_notices.claim_notice(user_id, db_notices.PROFILE_NUDGE) else ()
 
 
 async def _coach_comment(
     user_id: int,
-    ref: date,
     workout_stats: stats.WeeklyStats | stats.MonthlyStats,
     body: ReportBody,
     profile: UserProfile | None,
@@ -139,11 +139,11 @@ async def _coach_comment(
     /week pays for the model once. The admin preview stores it too: the cache is
     invisible to the user, whose own /week then shows the same comment.
     """
-    writer = llm_graph.default_writer()
+    writer = llm_writer.default_writer()
     if writer is None:
         return None
     try:
-        facts = build_facts(workout_stats, body, profile, settings.WEEKLY_GOAL, ref)
+        facts = build_facts(workout_stats, body, profile, settings.WEEKLY_GOAL)
         facts_hash = writer.fingerprint(facts)
         cached = await db_report_comments.get_comment(
             user_id, facts.kind, facts.period_start, facts_hash

@@ -152,13 +152,15 @@ def build_period_change(rows: list[BodyMeasurement], start: date, end: date) -> 
 
 
 def period_tone(change: PeriodChange, goal: UserGoal | None) -> PeriodTone:
-    """Classify the period's weight change against the goal; circumferences ignored."""
+    """Classify the period's weight change against the goal; circumferences ignored.
+
+    The in-period weight is also the latest one up to the period end, so "reached"
+    agrees with ``goal_reached`` everywhere else in the report.
+    """
     if goal is None or change.weight_kg is None:
         return "none"
 
-    current = change.weight_kg.value
-    target = goal.target_weight_kg
-    if target is not None and at_or_past_target(current, target, goal.goal_type):
+    if goal_reached(goal, change.weight_kg.value):
         return "reached"
 
     delta = change.weight_kg.delta
@@ -241,8 +243,37 @@ def _latest_non_null(
     return None
 
 
-def at_or_past_target(current: float, target: float, goal_type: GoalType) -> bool:
-    """Within the noise band of ``target``, or beyond it in the goal's direction."""
-    if abs(current - target) < WEIGHT_NOISE_KG:
-        return True
-    return (current - target) * goal_direction(goal_type) > 0
+def goal_reached(goal: UserGoal | None, weight_kg: float | None) -> bool:
+    """The weight is within noise of the target or past it in the goal's direction.
+
+    Never for maintain: holding the weight is its ongoing state, not a finish line.
+    Callers pass the latest weigh-in up to the report's period end, so the tone,
+    the pace, the energy guide and the coach comment all agree.
+    """
+    if goal is None or goal.goal_type == "maintain" or goal.target_weight_kg is None:
+        return False
+    if weight_kg is None:
+        return False
+    gap = weight_kg - goal.target_weight_kg
+    return abs(gap) < WEIGHT_NOISE_KG or gap * goal_direction(goal.goal_type) > 0
+
+
+def has_fresh_weighin(change: PeriodChange) -> bool:
+    """A weigh-in inside the report period — the one freshness rule for the pace and the comment.
+
+    An earlier weigh-in doesn't count: the report shows in-period measurements
+    only, so a verdict anchored to an older one would rest on data it doesn't show.
+    """
+    return change.weight_kg is not None
+
+
+def reported_pace(body: ReportBody) -> PaceStats | None:
+    """The pace verdict the report prints and the coach comment may discuss, else ``None``.
+
+    Needs a verdict (``status != "none"``: a ready trend, goal not reached) and a
+    fresh weigh-in.
+    """
+    pace = body.pace
+    if pace is None or pace.status == "none" or not has_fresh_weighin(body.change):
+        return None
+    return pace

@@ -25,6 +25,63 @@ COMMENT_UNIT_STEMS: dict[str, str] = {
     "калори": "kcal",
     "процент": "pct",
 }
+# Stems of the words a comment spells a kg/cm change's direction with, a few words
+# before the number («вес снизился на 0,4 кг»). The guard rejects a direction that
+# contradicts the sign of the fact with that number. «больше»/«меньше» are left out:
+# they compare («меньше плана») as often as they move.
+COMMENT_DOWN_STEMS: tuple[str, ...] = (
+    "сброс",
+    "сбрасыва",
+    "сниз",
+    "сниж",
+    "ушл",
+    "ушёл",
+    "ушел",
+    "уход",
+    "минус",
+    "уменьш",
+    "похуде",
+    "потеря",
+    "легче",
+)
+COMMENT_UP_STEMS: tuple[str, ...] = (
+    "набра",
+    "набир",
+    "выро",
+    "вырас",
+    "прибав",
+    "плюс",
+    "увелич",
+    "тяжелее",
+)
+# Number words (stems) the guard can't check against the facts, so a comment must use
+# digits: «две тренировки», «три кг» are rejected. «один»/«одна» stay allowed — «ещё
+# одна тренировка» is ordinary phrasing, not a count taken from the facts.
+COMMENT_NUMBER_WORD_STEMS: tuple[str, ...] = (
+    "полтор",
+    "два",
+    "две",
+    "двух",
+    "двум",
+    "три",
+    "трёх",
+    "трех",
+    "трём",
+    "трем",
+    "четыр",
+    "пят",
+    "шест",
+    "семь",
+    "семи",
+    "семн",
+    "восем",
+    "восьм",
+    "девят",
+    "десят",
+    "одиннадцат",
+)
+# Counted like a unit when it follows a number word.
+COMMENT_WORKOUT_STEM = "тренировк"
 
 WEEKLY_EMPTY = "На этой неделе тренировок не было. Начнём новую серию? 💪"
 MONTHLY_EMPTY = "В этом месяце тренировок не было. Самое время начать! 💪"
@@ -76,6 +133,11 @@ _NO_MEASUREMENTS: dict[ReportKind, str] = {
         "Если записывать вес хотя бы раз в неделю через /measure, здесь появится, "
         "как тело движется к цели."
     ),
+}
+
+_TONE_HOLDING: dict[ReportKind, str] = {
+    "week": "✨ За неделю вес почти не сдвинулся — ровно то, что нужно, чтобы держать форму.",
+    "month": "✨ За месяц вес почти не сдвинулся — ровно то, что нужно, чтобы держать форму.",
 }
 
 _TONE_SETBACK: dict[ReportKind, str] = {
@@ -146,6 +208,11 @@ def tone_progress(kind: ReportKind, left: str | None) -> str:
     if left is None:
         return "✨ За месяц ты заметно ближе к цели. Так держать."
     return f"✨ Осталось {left} кг — за месяц ты заметно ближе к цели. Так держать."
+
+
+def tone_holding(kind: ReportKind) -> str:
+    """Maintain goal: the weight stayed inside its band this period."""
+    return _TONE_HOLDING[kind]
 
 
 def tone_setback(kind: ReportKind) -> str:
@@ -252,8 +319,8 @@ def energy_target_maintain(target: str) -> str:
 
 def energy_below_floor(rate: str) -> str:
     return (
-        f"⚠️ При темпе {rate} кг в месяц норма питания получается слишком низкой — "
-        "ниже базового обмена, поэтому число не показываю."
+        f"⚠️ При темпе {rate} кг в месяц норма питания получается слишком низкой, "
+        "поэтому число не показываю."
     )
 
 
