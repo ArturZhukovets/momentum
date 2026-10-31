@@ -5,6 +5,18 @@
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-10-31
+
+### Добавлено
+- Комментарий тренера может писать модель OpenAI: `LLM_MODEL=openai:<модель>` и ключ OpenAI в `LLM_API_KEY`. Зависимость `langchain-openai`.
+- `LLM_REASONING_EFFORT` (по умолчанию `medium`) — глубина рассуждения для моделей `openai:`. Другим провайдерам не передаётся.
+
+### Изменено
+- `LLM_TIMEOUT` по умолчанию — 60 секунд вместо 10. Лимит ответа модели — 8000 токенов вместо 400: у моделей с рассуждением он включает скрытые токены.
+
+### Деплой
+- Миграций нет. Если в `.env` на сервере стоит `LLM_TIMEOUT=10`, поменяй на 60 или удали строку.
+
 ## [0.3.0] — 2026-10-31
 
 ### Добавлено
@@ -47,7 +59,8 @@
 - Внутренний HTTP API и цикл `ai_automation`: из одобренных предложений — спеки задач.
 - Схема через Alembic + SQLAlchemy; запуск polling или webhook в Docker.
 
-[Unreleased]: https://github.com/ArturZhukovets/momentum/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/ArturZhukovets/momentum/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/ArturZhukovets/momentum/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/ArturZhukovets/momentum/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/ArturZhukovets/momentum/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/ArturZhukovets/momentum/releases/tag/v0.1.0

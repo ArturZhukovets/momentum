@@ -49,7 +49,10 @@ class Settings(BaseSettings):
     LLM_API_KEY: SecretStr = SecretStr("")
     LLM_MODEL: str = "anthropic:claude-haiku-4-5"
     # Seconds one report may wait for its comment, retries included; the broadcast is sequential.
-    LLM_TIMEOUT: PositiveFloat = 10.0
+    LLM_TIMEOUT: PositiveFloat = 60.0
+    # OpenAI reasoning models only (none | low | medium | high | ...); empty = the model's default.
+    # Ignored for other providers, which don't take the parameter.
+    LLM_REASONING_EFFORT: str = "medium"
 
     LOG_LEVEL: str = "INFO"
 

@@ -46,7 +46,9 @@ SITUATION_SECTIONS: dict[Route, tuple[Section, ...]] = {
     "recomp": ("workouts", "goal", "measurements", "pace"),
     "unsafe": ("goal", "measurements", "pace", "energy"),
 }
-MAX_TOKENS = 400
+# Generous on purpose: a reasoning model spends its hidden reasoning from this same budget,
+# so a tight cap returns an empty answer. The comment's length is the prompt's and guard's job.
+MAX_TOKENS = 8000
 
 
 @dataclass(frozen=True)
@@ -138,6 +140,9 @@ def default_writer() -> CommentWriter | None:
 
         from momentum.services.llm.graph import build_writer
 
+        extra: dict[str, str] = {}
+        if settings.LLM_MODEL.startswith("openai:") and settings.LLM_REASONING_EFFORT:
+            extra["reasoning_effort"] = settings.LLM_REASONING_EFFORT
         model = init_chat_model(
             settings.LLM_MODEL,
             api_key=settings.LLM_API_KEY.get_secret_value(),
@@ -146,6 +151,7 @@ def default_writer() -> CommentWriter | None:
             # Retries belong to the graph's RetryPolicy, inside the report's budget.
             max_retries=0,
             max_tokens=MAX_TOKENS,
+            **extra,
         )
         writer = build_writer(model, settings.LLM_MODEL)
     except Exception:

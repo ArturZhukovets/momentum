@@ -115,7 +115,8 @@ between the two modes.
 | `REPORT_HOUR`       | `9`                          | local hour for both broadcasts                |
 | `LLM_API_KEY`       | —                            | coach comment in reports; empty = off         |
 | `LLM_MODEL`         | `anthropic:claude-haiku-4-5` | `provider:model` for `init_chat_model`        |
-| `LLM_TIMEOUT`       | `10`                         | seconds per report, retries included          |
+| `LLM_TIMEOUT`       | `60`                         | seconds per report, retries included          |
+| `LLM_REASONING_EFFORT` | `medium`                  | `openai:` models only; empty = model default  |
 | `LANGSMITH_TRACING` | `false`                      | `true` to trace comments in LangSmith         |
 | `LANGSMITH_API_KEY` | —                            | read by the langsmith SDK, not by `settings`  |
 | `LANGSMITH_PROJECT` | `default`                    | LangSmith project for the traces              |
