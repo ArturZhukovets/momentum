@@ -12,6 +12,7 @@ ImprovementRequestStatus = Literal["new", "approved", "done", "rejected"]
 Sex = Literal["male", "female"]
 GoalType = Literal["lose", "gain", "maintain", "muscle"]
 WorkoutType = Literal["running", "swimming", "elliptical", "gym", "home_workout"]
+ReportKind = Literal["week", "month"]
 
 
 @dataclass(frozen=True)
@@ -29,10 +30,12 @@ class Workout:
 
 @dataclass(frozen=True)
 class WorkoutStatRow:
-    """Date + type only — enough to count workouts for weekly/monthly stats."""
+    """The slim report projection: date + type to count, duration + effort for the energy."""
 
     performed_on: date
     workout_type: WorkoutType
+    duration_min: int | None
+    effort: str | None
 
 
 @dataclass(frozen=True)
@@ -83,7 +86,7 @@ class UserGoal:
     goal_type: GoalType
     start_weight_kg: float | None
     target_weight_kg: float | None
-    target_date: date | None
+    target_rate_kg_per_month: float | None  # unsigned; the direction is `goal_type`
     note: str
     is_active: bool
     created_at: datetime

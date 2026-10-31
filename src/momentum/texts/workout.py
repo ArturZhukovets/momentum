@@ -109,3 +109,13 @@ def weekly_nudge(done: int, goal: int) -> str:
 # --------------------------------------------------------------------------
 
 CARD_NO_DESCRIPTION = "<i>без описания</i>"
+CARD_DETAILS_SEPARATOR = " · "
+
+
+def card_duration(minutes: int) -> str:
+    return f"⏱ {minutes} мин"
+
+
+def card_distance(km: str) -> str:
+    """``km`` is already formatted."""
+    return f"📏 {km} км"

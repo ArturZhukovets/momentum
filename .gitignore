@@ -18,3 +18,5 @@ dist/
 # Loop artifacts
 .loop/
 .idea/
+# Claude Code local config
+.claude/

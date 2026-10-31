@@ -7,7 +7,6 @@ new one is deliberately not supported yet, so callers create a goal only after
 
 from __future__ import annotations
 
-from datetime import date
 from typing import Any
 
 from sqlalchemy import insert, select
@@ -24,7 +23,7 @@ def _goal_from_row(row: Any) -> UserGoal:
         goal_type=row.goal_type,
         start_weight_kg=row.start_weight_kg,
         target_weight_kg=row.target_weight_kg,
-        target_date=row.target_date,
+        target_rate_kg_per_month=row.target_rate_kg_per_month,
         note=row.note or "",
         is_active=bool(row.is_active),
         created_at=to_datetime(row.created_at),
@@ -50,7 +49,7 @@ async def create_goal(
     goal_type: GoalType,
     start_weight_kg: float | None = None,
     target_weight_kg: float | None = None,
-    target_date: date | None = None,
+    target_rate_kg_per_month: float | None = None,
     note: str = "",
 ) -> int:
     async with new_session() as s:
@@ -60,7 +59,7 @@ async def create_goal(
                 goal_type=goal_type,
                 start_weight_kg=start_weight_kg,
                 target_weight_kg=target_weight_kg,
-                target_date=target_date,
+                target_rate_kg_per_month=target_rate_kg_per_month,
                 note=note,
                 created_at=now_iso(),
             )

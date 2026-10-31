@@ -1,6 +1,6 @@
 [project]
 name = "momentum"
-version = "0.1.0"
+version = "0.2.0"
 description = "Momentum — personal Telegram workout-tracking bot"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -12,6 +12,10 @@ dependencies = [
     "pydantic-settings>=2.5",
     "sqlalchemy[asyncio]>=2.0",
     "alembic>=1.13",
+    "langgraph>=1.0,<2.0",
+    "langchain>=1.0,<2.0",
+    "langchain-core>=1.0,<2.0",
+    "langchain-anthropic>=1.0,<2.0",
 ]
 
 [build-system]

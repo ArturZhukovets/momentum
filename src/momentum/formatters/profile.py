@@ -28,6 +28,11 @@ def _cm(value: float) -> str:
     return _amount(value, texts_profile.UNIT_CM)
 
 
+def fmt_rate(kg_per_month: float) -> str:
+    """2.0 -> '2 кг/мес' — the goal card row and the pace buttons."""
+    return _amount(kg_per_month, texts_profile.UNIT_KG_PER_MONTH)
+
+
 def _line(label: str, value: str | None) -> str:
     return f"{label}: {value if value else texts_profile.VALUE_UNKNOWN}"
 
@@ -103,9 +108,9 @@ def goal_card(goal: UserGoal, current_weight_kg: float | None) -> str:
         lines.append(f"{texts_profile.LABEL_START_WEIGHT}: {_kg(goal.start_weight_kg)}")
     if goal.target_weight_kg is not None:
         lines.append(f"{texts_profile.LABEL_TARGET_WEIGHT}: {_kg(goal.target_weight_kg)}")
-    if goal.target_date is not None:
+    if goal.target_rate_kg_per_month is not None:
         lines.append(
-            f"{texts_profile.LABEL_TARGET_DATE}: {texts_common.fmt_date(goal.target_date)}"
+            f"{texts_profile.LABEL_TARGET_RATE}: {fmt_rate(goal.target_rate_kg_per_month)}"
         )
 
     if current_weight_kg is None:

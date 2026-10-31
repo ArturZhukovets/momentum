@@ -9,9 +9,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from momentum.db.models import BodyMeasurement, GoalType, UserGoal
+
+if TYPE_CHECKING:
+    # `pace` and `energy` build on this module, so a runtime import would cycle.
+    from momentum.services.energy import EnergyStats, ProfileField
+    from momentum.services.pace import PaceStats
 
 MeasurementField = Literal["weight_kg", "waist_cm", "chest_cm", "hips_cm", "thigh_cm", "arm_cm"]
 PeriodTone = Literal["progress", "setback", "reached", "none"]
@@ -113,12 +118,21 @@ class PeriodChange:
 
 @dataclass(frozen=True)
 class ReportBody:
-    """Goal + period change + tone, ready for the weekly/monthly report formatter."""
+    """Goal + period change + tone + pace + energy, ready for the weekly/monthly report formatter.
+
+    ``latest_weight`` is the newest weigh-in up to the period end, even one from
+    before the period. ``profile_nudge`` lists the profile answers to ask for;
+    empty unless this report is the one that carries the one-time nudge.
+    """
 
     change: PeriodChange
+    latest_weight: FieldSnapshot | None
     goal: UserGoal | None
     tone: PeriodTone
     kg_left: float | None
+    pace: PaceStats | None
+    energy: EnergyStats | None
+    profile_nudge: tuple[ProfileField, ...]
 
 
 def build_period_change(rows: list[BodyMeasurement], start: date, end: date) -> PeriodChange:
@@ -138,13 +152,15 @@ def build_period_change(rows: list[BodyMeasurement], start: date, end: date) -> 
 
 
 def period_tone(change: PeriodChange, goal: UserGoal | None) -> PeriodTone:
-    """Classify the period's weight change against the goal; circumferences ignored."""
+    """Classify the period's weight change against the goal; circumferences ignored.
+
+    The in-period weight is also the latest one up to the period end, so "reached"
+    agrees with ``goal_reached`` everywhere else in the report.
+    """
     if goal is None or change.weight_kg is None:
         return "none"
 
-    current = change.weight_kg.value
-    target = goal.target_weight_kg
-    if target is not None and _at_or_past_target(current, target, goal.goal_type):
+    if goal_reached(goal, change.weight_kg.value):
         return "reached"
 
     delta = change.weight_kg.delta
@@ -168,11 +184,25 @@ def delta_is_good(delta: float, goal_type: GoalType | None) -> bool | None:
     Circumferences use the same polarity as weight: down is good on lose, up on
     gain/muscle.
     """
-    if goal_type is None or delta == 0 or goal_type == "maintain":
+    direction = goal_direction(goal_type) if goal_type is not None else 0
+    if direction == 0 or delta == 0:
         return None
+    return delta * direction > 0
+
+
+def goal_direction(goal_type: GoalType) -> int:
+    """-1 when the goal wants the weight down, +1 up, 0 for maintain."""
     if goal_type == "lose":
-        return delta < 0
-    return delta > 0
+        return -1
+    if goal_type in ("gain", "muscle"):
+        return 1
+    return 0
+
+
+def latest_weight(rows: list[BodyMeasurement]) -> FieldSnapshot | None:
+    """Newest non-null weight in ``rows`` (any order); circumference-only rows are skipped."""
+    newest_first = sorted(rows, key=lambda r: (r.recorded_on, r.id), reverse=True)
+    return _field_snapshot(newest_first, "weight_kg")
 
 
 def kg_left(change: PeriodChange, goal: UserGoal | None) -> float | None:
@@ -213,11 +243,37 @@ def _latest_non_null(
     return None
 
 
-def _at_or_past_target(current: float, target: float, goal_type: GoalType) -> bool:
-    if abs(current - target) < WEIGHT_NOISE_KG:
-        return True
-    if goal_type == "lose":
-        return current < target
-    if goal_type in ("gain", "muscle"):
-        return current > target
-    return False
+def goal_reached(goal: UserGoal | None, weight_kg: float | None) -> bool:
+    """The weight is within noise of the target or past it in the goal's direction.
+
+    Never for maintain: holding the weight is its ongoing state, not a finish line.
+    Callers pass the latest weigh-in up to the report's period end, so the tone,
+    the pace, the energy guide and the coach comment all agree.
+    """
+    if goal is None or goal.goal_type == "maintain" or goal.target_weight_kg is None:
+        return False
+    if weight_kg is None:
+        return False
+    gap = weight_kg - goal.target_weight_kg
+    return abs(gap) < WEIGHT_NOISE_KG or gap * goal_direction(goal.goal_type) > 0
+
+
+def has_fresh_weighin(change: PeriodChange) -> bool:
+    """A weigh-in inside the report period — the one freshness rule for the pace and the comment.
+
+    An earlier weigh-in doesn't count: the report shows in-period measurements
+    only, so a verdict anchored to an older one would rest on data it doesn't show.
+    """
+    return change.weight_kg is not None
+
+
+def reported_pace(body: ReportBody) -> PaceStats | None:
+    """The pace verdict the report prints and the coach comment may discuss, else ``None``.
+
+    Needs a verdict (``status != "none"``: a ready trend, goal not reached) and a
+    fresh weigh-in.
+    """
+    pace = body.pace
+    if pace is None or pace.status == "none" or not has_fresh_weighin(body.change):
+        return None
+    return pace

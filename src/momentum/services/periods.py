@@ -47,10 +47,24 @@ def years_since(start: date, on: date) -> int:
 
 
 def week_start(d: date) -> date:
+    """
+    Returns the Monday (start) of the week containing the given date.
+
+    Example:
+        >>> week_start(date(2024, 5, 8))  # Wednesday, May 8, 2024
+        datetime.date(2024, 5, 6)
+    """
     return d - timedelta(days=d.weekday())
 
 
 def week_bounds(d: date) -> tuple[date, date]:
+    """
+    Returns the start (Monday) and end (Sunday) dates of the week containing the given date.
+
+    Example:
+        >>> week_bounds(date(2024, 5, 8))  # Wednesday, May 8th, 2024
+        (date(2024, 5, 6), date(2024, 5, 12))  # Monday to Sunday
+    """
     start = week_start(d)
     return start, start + timedelta(days=6)
 

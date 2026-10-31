@@ -32,6 +32,7 @@ from momentum.handlers import (
 from momentum.handlers import profile as profile_handlers
 from momentum.handlers import reports as reports_handlers
 from momentum.scheduler import build_scheduler
+from momentum.services.llm import writer as llm_writer
 from momentum.texts import admin as texts_admin
 from momentum.texts import common as texts_common
 
@@ -139,6 +140,8 @@ async def main() -> None:
     setup_logging()
     await upgrade_to_head()
     await init_db()
+    # At boot, not inside the first report: loading the provider SDK blocks for about a second.
+    llm_writer.default_writer()
 
     bot = Bot(
         token=settings.BOT_TOKEN.get_secret_value(),

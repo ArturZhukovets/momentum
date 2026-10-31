@@ -171,17 +171,30 @@ async def list_workouts(user_id: int, limit: int, offset: int) -> list[Workout]:
 
 
 async def list_workouts_for_stats(user_id: int, start: date, end: date) -> list[WorkoutStatRow]:
-    """Date + type in ``[start, end]`` — the slim projection stats builders need."""
+    """Workouts in ``[start, end]`` — the slim projection stats and energy builders need."""
     async with new_session() as s:
         rows = (
             await s.execute(
-                select(tables.Workout.performed_on, tables.Workout.workout_type).where(
+                select(
+                    tables.Workout.performed_on,
+                    tables.Workout.workout_type,
+                    tables.Workout.duration_min,
+                    tables.Workout.effort,
+                ).where(
                     tables.Workout.user_id == user_id,
                     tables.Workout.performed_on.between(start, end),
                 )
             )
         ).all()
-    return [WorkoutStatRow(r.performed_on, r.workout_type) for r in rows]
+    return [
+        WorkoutStatRow(
+            performed_on=r.performed_on,
+            workout_type=r.workout_type,
+            duration_min=r.duration_min,
+            effort=r.effort,
+        )
+        for r in rows
+    ]
 
 
 async def body_part_counts(user_id: int, start: date, end: date) -> dict[str, int]:

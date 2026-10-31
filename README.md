@@ -18,6 +18,7 @@ The bot's interface is entirely in Russian; the codebase is in English.
 | Migrations     | Alembic (`render_as_batch`, run at boot)   |
 | Scheduling     | APScheduler `AsyncIOScheduler`             |
 | Config         | python-dotenv + pydantic-settings          |
+| Coach comment  | LangGraph + LangChain (Anthropic default)  |
 | TLS / ingress  | nginx on the host (already running)        |
 
 ## Layout
@@ -98,21 +99,27 @@ between the two modes.
 
 ## Configuration
 
-| Variable         | Default             | Notes                                    |
-| ---------------- | ------------------- | ---------------------------------------- |
-| `BOT_TOKEN`      | —                   | required, `SecretStr`                    |
-| `BOT_MODE`       | `polling`           | `polling` \| `webhook`                   |
-| `WEBHOOK_BASE`   | —                   | webhook mode only                        |
-| `WEBHOOK_PATH`   | `/tg/momentum`      | keep the random segment secret           |
-| `WEBHOOK_SECRET` | —                   | `X-Telegram-Bot-Api-Secret-Token`        |
-| `WEB_HOST`       | `0.0.0.0`           |                                          |
-| `WEB_PORT`       | `8080`              |                                          |
-| `DB_PATH`        | `data/momentum.db`  | relative paths resolve to the repo root  |
-| `ADMIN_USER_IDS` | —                   | required, JSON list of Telegram ids      |
-| `APP_TZ`         | `Europe/Belgrade`   | weeks and months are computed in this tz |
-| `WEEKLY_GOAL`    | `3`                 | drives the nudge and the streak counter  |
-| `REPORT_HOUR`    | `9`                 | local hour for both broadcasts           |
-| `LOG_LEVEL`      | `INFO`              |                                          |
+| Variable            | Default                      | Notes                                         |
+| ------------------- | ---------------------------- | --------------------------------------------- |
+| `BOT_TOKEN`         | —                            | required, `SecretStr`                         |
+| `BOT_MODE`          | `polling`                    | `polling` \| `webhook`                        |
+| `WEBHOOK_BASE`      | —                            | webhook mode only                             |
+| `WEBHOOK_PATH`      | `/tg/momentum`               | keep the random segment secret                |
+| `WEBHOOK_SECRET`    | —                            | `X-Telegram-Bot-Api-Secret-Token`             |
+| `WEB_HOST`          | `0.0.0.0`                    |                                               |
+| `WEB_PORT`          | `8080`                       |                                               |
+| `DB_PATH`           | `data/momentum.db`           | relative paths resolve to the repo root       |
+| `ADMIN_USER_IDS`    | —                            | required, JSON list of Telegram ids           |
+| `APP_TZ`            | `Europe/Belgrade`            | weeks and months are computed in this tz      |
+| `WEEKLY_GOAL`       | `3`                          | drives the nudge and the streak counter       |
+| `REPORT_HOUR`       | `9`                          | local hour for both broadcasts                |
+| `LLM_API_KEY`       | —                            | coach comment in reports; empty = off         |
+| `LLM_MODEL`         | `anthropic:claude-haiku-4-5` | `provider:model` for `init_chat_model`        |
+| `LLM_TIMEOUT`       | `10`                         | seconds per report, retries included          |
+| `LANGSMITH_TRACING` | `false`                      | `true` to trace comments in LangSmith         |
+| `LANGSMITH_API_KEY` | —                            | read by the langsmith SDK, not by `settings`  |
+| `LANGSMITH_PROJECT` | `default`                    | LangSmith project for the traces              |
+| `LOG_LEVEL`         | `INFO`                       |                                               |
 
 ## Behaviour notes
 
@@ -136,6 +143,19 @@ between the two modes.
   Saved workouts are unaffected.
 - Reports go only to users with `reports_on = 1`; a user who blocks the bot is
   unsubscribed automatically instead of breaking the broadcast.
+- With `LLM_API_KEY` set, reports end with a short coach comment. A LangGraph
+  graph (`services/llm/`) picks the situation from the data (no data, no goal,
+  thin data, on/off track, recomposition, unsafe pace) and only then asks the
+  model, with that situation's prompt from `prompts/report/`. Every number in
+  the answer must appear in the facts, else one rewrite and then no comment.
+  Any error or a timeout sends the report without a comment. What the model
+  produced (including "nothing passed") is cached per user and period in
+  `report_comments` until the facts it saw, the model or a prompt change; an
+  admin preview fills the same cache. Each report whose situation reaches the
+  model can wait up to `LLM_TIMEOUT`, and the broadcast is sequential.
+- With `LANGSMITH_TRACING=true`, each comment's run — the branch, the facts
+  (weight, measurements, `user_id`) and the answer — is sent to LangSmith.
+  Tracing on without `LANGSMITH_API_KEY` only logs upload warnings.
 
 ## Admin panel
 

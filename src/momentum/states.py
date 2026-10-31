@@ -31,6 +31,7 @@ class Onboarding(StatesGroup):
     # Also entered from /goal when the user has no active goal yet.
     goal_type = State()
     target_weight = State()
+    goal_rate = State()  # never entered for maintain
 
     weight = State()
 

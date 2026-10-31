@@ -48,6 +48,18 @@ class User(Base):
     created_at: Mapped[str] = mapped_column(Text, nullable=False)
 
 
+class UserNotice(Base):
+    """One-time notices already sent: a row per ``(user_id, notice)``, never repeated."""
+
+    __tablename__ = "user_notices"
+
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True
+    )
+    notice: Mapped[str] = mapped_column(Text, primary_key=True)
+    sent_at: Mapped[str] = mapped_column(Text, nullable=False)
+
+
 class Workout(Base):
     __tablename__ = "workouts"
     __table_args__ = (
@@ -124,6 +136,11 @@ class UserGoal(Base):
         CheckConstraint("goal_type IN ('lose','gain','maintain','muscle')"),
         CheckConstraint("start_weight_kg IS NULL OR start_weight_kg > 0"),
         CheckConstraint("target_weight_kg IS NULL OR target_weight_kg > 0"),
+        # Named so a migration can drop it; the sign lives in `goal_type`, not here.
+        CheckConstraint(
+            "target_rate_kg_per_month IS NULL OR target_rate_kg_per_month > 0",
+            name="ck_user_goals_target_rate_positive",
+        ),
         # One active goal per user; a second insert raises IntegrityError.
         Index("ux_user_goals_active", "user_id", unique=True, sqlite_where=text("is_active = 1")),
         {"sqlite_autoincrement": True},
@@ -136,7 +153,7 @@ class UserGoal(Base):
     goal_type: Mapped[str] = mapped_column(Text, nullable=False)
     start_weight_kg: Mapped[float | None] = mapped_column(Float)
     target_weight_kg: Mapped[float | None] = mapped_column(Float)
-    target_date: Mapped[date | None] = mapped_column(Date)
+    target_rate_kg_per_month: Mapped[float | None] = mapped_column(Float)
     note: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("''"))
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("1"))
     created_at: Mapped[str] = mapped_column(Text, nullable=False)
@@ -164,4 +181,25 @@ class BodyMeasurement(Base):
     thigh_cm: Mapped[float | None] = mapped_column(Float)
     arm_cm: Mapped[float | None] = mapped_column(Float)
     note: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("''"))
+    created_at: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+class ReportComment(Base):
+    """The coach comment last written for one report period.
+
+    One row per ``(user_id, kind, period_start)``, overwritten when the period's
+    facts change: ``facts_hash`` is the fingerprint of what the comment was written
+    from. An empty ``comment`` records that no draft passed the guard.
+    """
+
+    __tablename__ = "report_comments"
+    __table_args__ = (CheckConstraint("kind IN ('week','month')"),)
+
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True
+    )
+    kind: Mapped[str] = mapped_column(Text, primary_key=True)
+    period_start: Mapped[date] = mapped_column(Date, primary_key=True)
+    facts_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    comment: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[str] = mapped_column(Text, nullable=False)

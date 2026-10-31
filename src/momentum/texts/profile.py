@@ -37,6 +37,7 @@ def goal_type_label(value: str) -> str:
 
 UNIT_KG = "кг"
 UNIT_CM = "см"
+UNIT_KG_PER_MONTH = "кг/мес"
 
 VALUE_UNKNOWN = "<i>не указано</i>"
 
@@ -57,6 +58,10 @@ ASK_SEX = "Укажи пол."
 ASK_HEIGHT = "Какой у тебя рост в сантиметрах? (например, 178)"
 ASK_GOAL_TYPE = "К чему идём?"
 ASK_TARGET_WEIGHT = "Какой вес хочешь получить? В килограммах (например, 75)."
+ASK_GOAL_RATE = (
+    "С какой скоростью хочешь двигаться? Выбери темп — сколько килограммов в месяц.\n"
+    "Спокойный темп проще удержать надолго."
+)
 ASK_CURRENT_WEIGHT = "Сколько весишь сейчас? В килограммах (например, 82,5)."
 
 ONBOARDING_DONE = (
@@ -100,7 +105,7 @@ LABEL_GOAL_TYPE = "Тип"
 LABEL_START_WEIGHT = "Старт"
 LABEL_TARGET_WEIGHT = "Цель"
 LABEL_CURRENT_WEIGHT = "Сейчас"
-LABEL_TARGET_DATE = "Срок"
+LABEL_TARGET_RATE = "Темп"
 LABEL_GOAL_PROGRESS = "Пройдено"
 LABEL_GOAL_LEFT = "Осталось"
 
@@ -120,8 +125,7 @@ def goal_progress_line(done: str, span: str, pct: int) -> str:
 MEASURE_TITLE = "📏 <b>Замер</b>"
 
 MEASURE_ALREADY_TODAY = (
-    "Замер на сегодня уже есть, следующий замер можно сделать только завтра!"
-    "\n\nВот что записано:"
+    "Замер на сегодня уже есть, следующий замер можно сделать только завтра!\n\nВот что записано:"
 )
 
 ASK_MEASURE_WEIGHT = "Укажи свой текущий вес в килограммах (например, 82,5)."

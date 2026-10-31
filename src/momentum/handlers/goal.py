@@ -1,9 +1,9 @@
 """/goal — view the active goal, or start setting one.
 
-The actual goal-type/target-weight questions are asked by
+The actual goal-type/target-weight/pace questions are asked by
 `handlers/onboarding.py` (`_ask_goal_type`), since they run on the shared
-`Onboarding.goal_type`/`Onboarding.target_weight` states used mid-onboarding
-too.
+`Onboarding.goal_type`/`Onboarding.target_weight`/`Onboarding.goal_rate`
+states used mid-onboarding too.
 """
 
 from __future__ import annotations

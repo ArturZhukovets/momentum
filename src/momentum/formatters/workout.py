@@ -6,6 +6,7 @@ from html import escape
 
 from momentum.db.models import Workout
 from momentum.formatters._shared import truncate
+from momentum.formatters.profile import fmt_number
 from momentum.texts import common as texts_common
 from momentum.texts import workout as texts_workout
 
@@ -18,10 +19,25 @@ def workout_card(workout: Workout) -> str:
     ]
     if workout.body_parts:
         lines.append(f"🎯 {texts_workout.body_parts_line(workout.body_parts)}")
+    details = _details_line(workout)
+    if details:
+        lines.append(details)
 
     description = workout.description.strip()
     lines.append(f"📝 {escape(description)}" if description else texts_workout.CARD_NO_DESCRIPTION)
     return "\n".join(lines)
+
+
+def _details_line(workout: Workout) -> str | None:
+    """Duration · distance · effort — whichever were recorded, in the order they're asked."""
+    details = []
+    if workout.duration_min is not None:
+        details.append(texts_workout.card_duration(workout.duration_min))
+    if workout.distance_km is not None:
+        details.append(texts_workout.card_distance(fmt_number(workout.distance_km)))
+    if workout.effort is not None:
+        details.append(texts_workout.choice_label("effort", workout.effort))
+    return texts_workout.CARD_DETAILS_SEPARATOR.join(details) or None
 
 
 def history_row_label(workout: Workout) -> str:

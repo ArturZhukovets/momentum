@@ -3,6 +3,8 @@
 `.env` is loaded at import time, *before* Settings is built, so real
 environment variables (Docker, systemd) always take precedence over the file.
 Nothing else in the codebase reads os.environ directly — import `settings`.
+The one outside reader is the langsmith SDK: it picks `LANGSMITH_*` up from the
+environment on its own, which is why they have no fields here.
 """
 
 from __future__ import annotations
@@ -12,7 +14,7 @@ from typing import Literal
 from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
-from pydantic import SecretStr, field_validator, model_validator
+from pydantic import PositiveFloat, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -43,6 +45,12 @@ class Settings(BaseSettings):
     WEEKLY_GOAL: int = 3
     REPORT_HOUR: int = 9
 
+    # Coach comment in reports. An empty key turns it off — there is no separate flag.
+    LLM_API_KEY: SecretStr = SecretStr("")
+    LLM_MODEL: str = "anthropic:claude-haiku-4-5"
+    # Seconds one report may wait for its comment, retries included; the broadcast is sequential.
+    LLM_TIMEOUT: PositiveFloat = 10.0
+
     LOG_LEVEL: str = "INFO"
 
     @field_validator("APP_TZ")
@@ -70,6 +78,10 @@ class Settings(BaseSettings):
     @property
     def tz(self) -> ZoneInfo:
         return ZoneInfo(self.APP_TZ)
+
+    @property
+    def llm_enabled(self) -> bool:
+        return bool(self.LLM_API_KEY.get_secret_value())
 
     @property
     def db_file(self) -> Path:
