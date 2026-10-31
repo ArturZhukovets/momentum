@@ -7,7 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Momentum is a personal Telegram bot for tracking workouts, body measurements and a
 weight goal, on aiogram 3 + SQLAlchemy 2.0 (async, aiosqlite) + Alembic + APScheduler.
 Fully async, Python 3.13, packaged with `uv`. **User-facing copy is entirely Russian;
-code is English** — Russian strings live only in `texts/`, never inline.
+code is English** — Russian strings live only in `texts/` (LLM prompts in `prompts/`), never
+inline.
 
 No test suite exists.
 
@@ -132,5 +133,8 @@ tracking state in `todo.json`.
 - Every module uses `from __future__ import annotations`.
 - `docs/` holds explainers worth reading before the change they describe: `routing.md` and
   `fsm.md` before routing or the FSM, `db-rebuild.md` before a schema rebuild,
-  `2026-09-26.md` before report pace, calories, or the coach comment. Divergences that doc
-  lists are intentional.
+  `releases/v0.2.0.md` before report pace, calories, or the coach comment. Divergences that
+  doc lists are intentional.
+- **Releases.** Bump the version in `pyproject.toml` (then `uv lock`) and add a short Russian
+  section on top of [CHANGELOG.md](CHANGELOG.md); its header holds the versioning rules. A long
+  write-up, if any, goes to `docs/releases/vX.Y.Z.md` and the changelog links to it.
