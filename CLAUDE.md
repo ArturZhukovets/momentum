@@ -135,6 +135,12 @@ tracking state in `todo.json`.
   `fsm.md` before routing or the FSM, `db-rebuild.md` before a schema rebuild,
   `releases/v0.2.0.md` before report pace, calories, or the coach comment. Divergences that
   doc lists are intentional.
-- **Releases.** Bump the version in `pyproject.toml` (then `uv lock`) and add a short Russian
-  section on top of [CHANGELOG.md](CHANGELOG.md); its header holds the versioning rules. A long
-  write-up, if any, goes to `docs/releases/vX.Y.Z.md` and the changelog links to it.
+- **Releases.** Every user-visible change ships as a version. **Before the commit**, bump the
+  version in `pyproject.toml` (then `uv lock`) and add a short Russian section on top of
+  [CHANGELOG.md](CHANGELOG.md); its header holds the versioning rules (feature → minor,
+  fix → patch). Put the bump, lockfile and changelog in the same commit as the change, or in a
+  release commit right on top of it. A long write-up, if any, goes to `docs/releases/vX.Y.Z.md`
+  and the changelog links to it. Then tag the release commit with an annotated `vX.Y.Z` tag
+  (`git tag -a vX.Y.Z -m "vX.Y.Z"`) and push the branch and the tag:
+  `git push origin main && git push origin vX.Y.Z`. A release is not done until the tag is on
+  `origin`.
