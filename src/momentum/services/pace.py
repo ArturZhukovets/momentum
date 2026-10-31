@@ -36,11 +36,13 @@ UNSAFE_WEEKLY_LOSS_SHARE = 0.01
 MAX_PROJECTION_WEEKS = 104
 
 # kg/month, unsigned. Maintain has none: its planned pace is zero by definition.
+# Lose stops at 3: faster than ~1% of body weight a week reads as `unsafe` for most people.
 RATE_PRESETS: dict[GoalType, tuple[float, ...]] = {
-    "lose": (1.0, 2.0, 3.0),
-    "gain": (0.5, 1.0, 2.0),
+    "lose": (0.5, 1.0, 1.5, 2.0, 2.5, 3.0),
+    # Past ~2 kg/month a weight gain is mostly fat; the faster presets are a deliberate bulk.
+    "gain": (0.5, 1.0, 1.5, 2.0, 2.5, 3.0),
     # Muscle grows ~0.5–1 kg/month even for a beginner; anything faster is water and fat.
-    "muscle": (0.5, 1.0),
+    "muscle": (0.3, 0.5, 0.7, 1.0),
 }
 
 

@@ -69,16 +69,15 @@ def goal_type_kb(step: str | None = None, *, cancel: bool = True) -> InlineKeybo
 
 
 def goal_rate_kb(goal_type: GoalType, step: str, *, cancel: bool = True) -> InlineKeyboardMarkup:
-    """One row of pace presets for `goal_type`, then «skip» (the pace is always optional)."""
-    rows = [
-        [
-            InlineKeyboardButton(
-                text=fmt_profile.fmt_rate(value), callback_data=GoalRateCB(value=value).pack()
-            )
-            for value in pace.rate_presets(goal_type)
-        ],
-        [_skip_button(step)],
+    """Pace presets for `goal_type` in rows of 3, then «skip» (the pace is always optional)."""
+    buttons = [
+        InlineKeyboardButton(
+            text=fmt_profile.fmt_rate(value), callback_data=GoalRateCB(value=value).pack()
+        )
+        for value in pace.rate_presets(goal_type)
     ]
+    rows = [buttons[i : i + 3] for i in range(0, len(buttons), 3)]
+    rows.append([_skip_button(step)])
     if cancel:
         rows.append([CANCEL_BUTTON])
     return InlineKeyboardMarkup(inline_keyboard=rows)
